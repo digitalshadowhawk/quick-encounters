@@ -1,6 +1,11 @@
 # RELEASE NOTES
+## 12
+- Planned: Support Foundry v10-12 (drop support for v9)
+- [Milestone 12 enhancements](https://github.com/spetzel2020/quick-encounters/milestone/8)
 ## 1.2
 - New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker
+### 1.2.3
+- Planned: Bug fixes for [#141](https://github.com/spetzel2020/quick-encounters/issues/141), #128 , #124, #67
 ### 1.2.2
 - Fixing [#137](https://github.com/spetzel2020/quick-encounters/issues/137) (support more generalized dice rolls)
 ### 1.2.1
