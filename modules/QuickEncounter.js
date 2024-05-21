@@ -255,6 +255,7 @@
 8-Aug-2023      1.2.0b: Issue 123: Automatically add Player Tokens to Combat Tracker - add option    
 16-Aug-2023     1.2.0d: Removed "All" option because I don't know what it means (it would imply creating tokens for all players who weren't already in the scene) 
 3-Oct-2023      1.2.1c: Fixed #139: Changed code for "Add Player Tokens option Logged In" - thanks "DrMcCoy"; filter for those tokens with Actor === user.character (their assigned primary character)
+21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because )
 */
 
 
@@ -1329,9 +1330,9 @@ export class QuickEncounter {
                 //v0.6: Pass the multiplier to the roll formula, which allows for a digit or a formula
                 let r= new Roll(multiplier);
                 if (options?.rollType === "full") {
-                    r.evaluate({async: false});
+                    r.evaluateSync();
                 } else {//template or other
-                    r.evaluate({minimize: false, maximize: true, async: false});
+                    r.evaluateSync({minimize: false, maximize: true});
                 }
                 numActors = r.total ? r.total : 1;
             } 
