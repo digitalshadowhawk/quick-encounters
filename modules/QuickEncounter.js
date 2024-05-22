@@ -196,7 +196,7 @@
 25-Apr-2022     1.0.2a: Issue 88: Alt- and Ctrl- accelerators should work with the Run Instant Encounter button 
                 Override the click and submit so we can pass the event (and eventually determine if Ctrl- or Alt- were used)  
 5-May-2022      1.0.3a: First cuts for Foundry v10
-                init(): Set QuickEncounters.isFoundryV10Plus; extractActors(): look for content-link (changed from entity-link) and other changes
+                init(): Set QuickEncounter.isFoundryV10Plus; extractActors(): look for content-link (changed from entity-link) and other changes
                 1.0.3b: generateFullExtractedActorTokenData(): Yet another way to strip tokenData of prototype information so it can be duplicated
 8-Aug-2022      1.0.4b: generateFullExtractedActorTokenData(): Under Foundry v10 skip new TokenDocument() call because Actor.getTokenData() already returns a TokenDocument
                 1.0.4c: Issue #92: Foundry v10 Testing 3 (Build 277): A QE is no longer generated from a Journal Entry with embedded Actors
@@ -257,6 +257,7 @@
 3-Oct-2023      1.2.1c: Fixed #139: Changed code for "Add Player Tokens option Logged In" - thanks "DrMcCoy"; filter for those tokens with Actor === user.character (their assigned primary character)
 21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because apparently sync can only be used for deterministic rolls
                 1.2.3c: Changed r.evaluate() to async calls because of Roll() changes
+                1.2.3d: Added isFoundryV12Plus
 */
 
 
@@ -352,7 +353,12 @@ export class QuickEncounter {
         let qeJSON = journalEntry?.getFlag(QE.MODULE_NAME, QE.QE_JSON_FLAG_KEY);
         if (qeJSON) try {
             const quickEncounterFromData = JSON.parse(qeJSON);
-            quickEncounter = mergeObject(quickEncounter, quickEncounterFromData);
+            //1.2.3d: Replace v12 mergeObject with foundry.utils version
+            if (QuickEncounter.isFoundryV12Plus) {
+                quickEncounter = foundry.utils.mergeObject(quickEncounter, quickEncounterFromData); 
+            } else {
+                quickEncounter = mergeObject(quickEncounter, quickEncounterFromData);
+            }
             //v0.6.1: Backwards compatibility - set the isSavedToken flag
             quickEncounter.extractedActors?.forEach(eActor => {
                 eActor.savedTokensData?.forEach(td => {td.isSavedToken = true;});
@@ -373,7 +379,12 @@ export class QuickEncounter {
         return quickEncounter;
     }
     update(newQEData) {
-        mergeObject(this, newQEData);
+        //1.2.3d: Replace v12 mergeObject with foundry.utils version
+        if (QuickEncounter.isFoundryV12Plus) {
+            foundry.utils.mergeObject(this, newQEData);
+        } else {
+            mergeObject(this, newQEData);
+        }
         //Update into Journal Entry
         this.serializeIntoJournalEntry();
     }
@@ -507,6 +518,8 @@ export class QuickEncounter {
         QuickEncounter.isFoundryV8Plus = (game.data.release?.generation >= 9) || (game.data.version?.startsWith("0.8"));
         //1.0.3a: For Foundry v10 and 1.1.5b for Foundry 
         QuickEncounter.isFoundryV10Plus = (game.data.release?.generation >= 10);
+        //1.2.3d: For Foundry v12
+        QuickEncounter.isFoundryV12Plus = (game.data.release?.generation >= 12);
     }
 
 
@@ -780,7 +793,7 @@ export class QuickEncounter {
             controlledTokensData = controlledTokens.map(ct => { return ct.data});
         }
         //TODO: Is this necessary, or could we just remove controlledTokensData?
-        const newSavedTokensData = duplicate(controlledTokensData);
+        const newSavedTokensData = QuickEncounter.isFoundryV12Plus ? foundry.utils.duplicate(controlledTokensData) : duplicate(controlledTokensData);
 
         //Find set of distinct actors - some/all of these may be new if the addTokens is being called from create
         let tokenActorIds = new Set();
@@ -874,7 +887,7 @@ export class QuickEncounter {
         });
 
         if (!this.savedTilesData) {this.savedTilesData = [];}
-        this.savedTilesData = this.savedTilesData.concat(duplicate(controlledTilesData));
+        this.savedTilesData = this.savedTilesData.concat(QuickEncounter.isFoundryV12Plus ? foundry.utils.duplicate(controlledTilesData) : duplicate(controlledTilessData));
 
         //Delete the existing tokens (because they will be replaced)
         const controlledTilesIds = controlledTiles.map(ct => {return ct.id});
@@ -1497,12 +1510,12 @@ export class QuickEncounter {
                 matchingToken.addToCombatTracker = ctd.addToCombatTracker;
                 existingTokens.push(matchingToken);
             } else {
-                toCreateCombinedTokensData.push(duplicate(ctd));
+                toCreateCombinedTokensData.push(QuickEncounter.isFoundryV12Plus ? foundry.utils.duplicate(ctd) : duplicate(ctd));
             }
         }
 
         //We do need to check that toCreateCombinedTokensData is not empty (if everything is already on the Scene)
-        const origCombinedTokensData = duplicate(toCreateCombinedTokensData);
+        const origCombinedTokensData = QuickEncounter.isFoundryV12Plus ? foundry.utils.duplicate(toCreateCombinedTokensData) : duplicate(toCreateCombinedTokensData);
         let tempCreatedTokens;
 
         //0.9.3f: Fix 0.8.0 deprecation warning: call canvas.scene.createEmbeddedDocuments() instead of Token.create()
@@ -1595,7 +1608,7 @@ export class QuickEncounter {
         if (QuickEncounter.isFoundryV8Plus) {
             createdTiles = shiftedTilesData.length ? await canvas.scene.createEmbeddedDocuments("Tile", shiftedTilesData) : [];
         } else {
-            createdTiles = await Tile.create(duplicate(shiftedTilesData));
+            createdTiles = await Tile.create(QuickEncounter.isFoundryV12Plus ? foundry.utils.duplicate(shiftedTilesData) : duplicate(shiftedTilesData));
         }
 
         return createdTiles;

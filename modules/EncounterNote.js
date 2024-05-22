@@ -45,7 +45,8 @@ Subsequently can add: (a) Drag additional tokens in, (b) populate the Combat Tra
                 Hooks.on('dropCanvasData'): Add check for JournalEntryPage and add common function checkForQEAndCreateNote()
                 create(): Remove check for FoundryV10 and switch to parentJournalEntry
                 Re-clone _onDropData() from foundry.js to account for new Note fields (for JournalEntryPage)
-29-May-2023     1.1.5b: Changed isFoundryV10Plus to isFoundryV10PlusPlus (to support checks for Foundry V11)                  
+29-May-2023     1.1.5b: Changed isFoundryV10 to isFoundryV10Plus (to support checks for Foundry V11)    
+21-May-2024     1.2.3d: v12: Switch (optionally) to new foundry.utils.mergeObject()              
 */
 
 //Expand the available list of Note icons
@@ -95,10 +96,17 @@ export class EncounterNoteConfig extends NoteConfig {
     /** @override  */
     //WARNING: Do not add submitOnClose=true because that will create a submit loop
     static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
+        let defaultOptions;
+        const addedOptions = {
             id : "encounter-note-config",
             title : game.i18n.localize( "QE.Config.TITLE")
-        });
+        }
+        if (QuickEncounter.isFoundryV12Plus) {
+            defaultOptions = foundry.utils.mergeObject(super.defaultOptions, addedOptions); 
+        } else {
+            defaultOptions = mergeObject(super.defaultOptions, addedOptions);
+        }
+        return defaultOptions;
     }
 }
 
