@@ -44,6 +44,7 @@ Reused as EncounterCompanionSheet
 14-Nov-2022     1.1.1g: _updateObject(), _onChange(): Check for rollTable changes (e.g. changing number to die roll)
 29-May-2023     1.1.5b: Changed isFoundryV10Plus to isFoundryV10PlusPlus (to support checks for Foundry V11)  
 15-Nov-2023     1.2.2a: Fixed #137: Support more generalized dice rolls by changing dieRollReg check to Roll.validate() in _updateObject()
+21-May-2023     1.2.3c: computeCombatantsForDisplay() calls await generateTemplateExtractedActorTokenData() (because that is now async)
 */
 
 
@@ -168,7 +169,8 @@ export class QESheet extends FormApplication {
 
     async computeCombatantsForDisplay() {
         //This version of the Quick Encounter is what is extracted from in the Journal Entry
-        this.object.generateTemplateExtractedActorTokenData();     //this is just sparse array with the correct numbers
+        //1.2.3c: Change to await call because of effects of Roll() now having to be called async
+        await this.object.generateTemplateExtractedActorTokenData();     //this is just sparse array with the correct numbers
         this.object.combineTokenData();
 
         let combatants = [];

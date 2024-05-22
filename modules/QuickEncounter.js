@@ -255,7 +255,8 @@
 8-Aug-2023      1.2.0b: Issue 123: Automatically add Player Tokens to Combat Tracker - add option    
 16-Aug-2023     1.2.0d: Removed "All" option because I don't know what it means (it would imply creating tokens for all players who weren't already in the scene) 
 3-Oct-2023      1.2.1c: Fixed #139: Changed code for "Add Player Tokens option Logged In" - thanks "DrMcCoy"; filter for those tokens with Actor === user.character (their assigned primary character)
-21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because )
+21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because apparently sync can only be used for deterministic rolls
+                1.2.3c: Changed r.evaluate() to async calls because of Roll() changes
 */
 
 
@@ -1316,7 +1317,7 @@ export class QuickEncounter {
 
 
 
-    static getNumActors(extractedActor, options={}) {
+    static async getNumActors(extractedActor, options={}) {
         //Get the number of actors including rolling if options.rollRandom=true
         let multiplier = extractedActor.numActors;
         //If numActors didn't/doesn't convert then just create 1 token
@@ -1330,9 +1331,11 @@ export class QuickEncounter {
                 //v0.6: Pass the multiplier to the roll formula, which allows for a digit or a formula
                 let r= new Roll(multiplier);
                 if (options?.rollType === "full") {
-                    r.evaluateSync();
+                    //1.2.3c: Change to await call because of effects of Roll() now having to be called async
+                    await r.evaluate();
                 } else {//template or other
-                    r.evaluateSync({minimize: false, maximize: true});
+                    //1.2.3c: Change to await call because of effects of Roll() now having to be called async
+                    await r.evaluate({minimize: false, maximize: true});
                 }
                 numActors = r.total ? r.total : 1;
             } 
@@ -1365,14 +1368,15 @@ export class QuickEncounter {
     }
 
 
-    generateTemplateExtractedActorTokenData() {
+    async generateTemplateExtractedActorTokenData() {
         //0.6.1d: Create a template array so we can tell how many saved vs. generated tokens we will have at display time
         //(without actually extracting Actor/Compendium data every time)
         if (!this.extractedActors?.length) {return;}
         for (let [iExtractedActor, eActor] of this.extractedActors.entries()) {
             this.extractedActors[iExtractedActor].generatedTokensData = [];  //clear this every time
             //v0.6.4: For random rolls, need the max number returned here
-            const numActors = QuickEncounter.getNumActors(eActor, {rollType: "template"});
+            //1.2.3c: Change to await call because of effects of Roll() now having to be called async
+            const numActors = await QuickEncounter.getNumActors(eActor, {rollType: "template"});
 //FIXME: Probably a more efficient way to fill an array 0..numActors-1            
             for (let iToken=0; iToken < numActors; iToken++ ) {
                 //0.6.8: Put the generatedTokensData on the extractedActor, just like the savedTokensData
@@ -1393,7 +1397,8 @@ export class QuickEncounter {
             const actor = await QuickEncounter.getActor(eActor);
             if (!actor) {continue;}     //possibly will happen with Compendium
 //FIXME: May have to update extractedActor with the imported actorId and then hopefully it won't re-import - see Issue #66
-            const numActors = QuickEncounter.getNumActors(eActor, {rollType : "full"});
+            //1.2.3c: Change to await call because of effects of Roll() now having to be called async
+            const numActors = await QuickEncounter.getNumActors(eActor, {rollType : "full"});
 
              for (let iToken=0; iToken < numActors; iToken++) {
                  //Slightly vary the (x,y) coords so we don't pile all the tokens on top of each other and make them hard to find
