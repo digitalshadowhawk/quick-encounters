@@ -46,7 +46,8 @@ Subsequently can add: (a) Drag additional tokens in, (b) populate the Combat Tra
                 create(): Remove check for FoundryV10 and switch to parentJournalEntry
                 Re-clone _onDropData() from foundry.js to account for new Note fields (for JournalEntryPage)
 29-May-2023     1.1.5b: Changed isFoundryV10 to isFoundryV10Plus (to support checks for Foundry V11)    
-21-May-2024     1.2.3d: v12: Switch (optionally) to new foundry.utils.mergeObject()              
+21-May-2024     1.2.3d: v12: Switch (optionally) to new foundry.utils.mergeObject()  
+23-May-2024     1.2.3e: class EncounterNote: Move icon and iconTint into texture (supposedly deprecated since v10)      
 */
 
 //Expand the available list of Note icons
@@ -120,13 +121,16 @@ export class EncounterNote {
         //1.1.5a: Remove defaulting to parent, but if it's a page you have to reference the parent JournalEntry and page reference
         let noteJournalEntry = (journalEntry instanceof JournalEntryPage) ? journalEntry.parent : journalEntry;
         // Create Note data
+        //1.2.3: This data structure supposedly deprecated since v10, so change now
         const noteData = {
               entryId: noteJournalEntry.id,
               x: noteAnchor.x,
               y: noteAnchor.y,
-              icon: CONFIG.JournalEntry.noteIcons.Combat,
+              texture: {
+                src: CONFIG.JournalEntry.noteIcons.Combat,
+                tint: "#FF0000",  //Red
+              },
               iconSize: 80,
-              iconTint: "#FF0000",  //Red
               //Don't specify the name so it inherits from the Journal
               textAnchor: CONST.TEXT_ANCHOR_POINTS.TOP,
               fontSize: 24
