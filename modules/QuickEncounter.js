@@ -258,7 +258,8 @@
 21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because apparently sync can only be used for deterministic rolls
                 1.2.3c: Changed r.evaluate() to async calls because of Roll() changes
                 1.2.3d: Added isFoundryV12Plus
-28-May-2024     1.2.3f: createFrom: Check for journalEntryPage0 not defined and create                
+28-May-2024     1.2.3f: createFrom: Check for journalEntryPage0 not defined and create 
+                1.2.3g: Add text.content to journalEntryPage0 creation ( description of added QE)               
 */
 
 
@@ -710,10 +711,12 @@ export class QuickEncounter {
                 const journalEntryData = {
                     name: journalEntry.name,
                     sort: 100000,
-                    type: "text"
+                    type: "text",
+                    text: {
+                        content: content,
+                        format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML}
                 }
                 journalEntryPage0 = await JournalEntryPage.create(journalEntryData, {parent: journalEntry, pack: null, renderSheet:false });
-                if (journalEntryPage0.text) journalEntryPage0.text.content = content;
             }
             if (journalEntryPage0) {qeJournalEntry = journalEntryPage0;}
         }
