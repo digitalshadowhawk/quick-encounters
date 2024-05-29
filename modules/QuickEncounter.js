@@ -258,6 +258,7 @@
 21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because apparently sync can only be used for deterministic rolls
                 1.2.3c: Changed r.evaluate() to async calls because of Roll() changes
                 1.2.3d: Added isFoundryV12Plus
+28-May-2024     1.2.3f: createFrom: Check for journalEntryPage0 not defined and create                
 */
 
 
@@ -703,7 +704,17 @@ export class QuickEncounter {
         let qeJournalEntry = journalEntry; //the Journal Entry or JournalEntryPage we will store the QE with
         //1.0.4l: In Foundry v10, we want to make this the first JournalEntryPage
         if (QuickEncounter.isFoundryV10Plus) {
-            const journalEntryPage0 = journalEntry.pages?.values()?.next()?.value;
+            //1.2.3f: In v10 and v11 there was a default page0; that doesn't seem to be true in v12
+            let journalEntryPage0 = journalEntry.pages?.values()?.next()?.value;
+            if (QuickEncounter.isFoundryV12Plus && !journalEntryPage0) {
+                const journalEntryData = {
+                    name: journalEntry.name,
+                    sort: 100000,
+                    type: "text"
+                }
+                journalEntryPage0 = await JournalEntryPage.create(journalEntryData, {parent: journalEntry, pack: null, renderSheet:false });
+                if (journalEntryPage0.text) journalEntryPage0.text.content = content;
+            }
             if (journalEntryPage0) {qeJournalEntry = journalEntryPage0;}
         }
 
