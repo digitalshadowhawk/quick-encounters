@@ -2,44 +2,45 @@
 
 ## BASIC
 ### METHOD 1 - create JE from selected tokens 
-1. Select one friendly token and press QE button -> should ask if you want to add to JE                 TESTED in 1.2.3
-2. Select multiple friendly and neutral tokens -> should ask...						                    TEST in 1.2.3
-3. Select one hostile token and press QE button -> creates JE & QE                                      TEST in 1.2.3
-4. Select multiple hostile and neutral tokens and press QE button -> creates JE & QE			        TEST in 1.2.3
+1. Select one friendly token and press QE button -> should ask if you want to add to JE                 TESTED in 1.2.3, Foundry v12
+2. Select multiple friendly and neutral tokens -> should ask...						                    TESTED in 1.2.3, Foundry v12
+3. Select one hostile token and press QE button -> creates JE & QE                                      TESTED in 1.2.3, Foundry v12
+4. Select multiple hostile and neutral tokens and press QE button -> creates JE & QE			        TTESTED in 1.2.3, Foundry v12
 
 ### METHOD 2 - add Actors/Tokens to blank JE
-1. Embed actor references in a vanilla Journal Entry ; should re-render with QE dialog                  TEST in 1.2.3
-2. Open a vanilla Journal Entry, select tokens, and press the QE button to turn this into a QE -> ADD vs. CREATE dialog   TEST in 1.2.3
-3. Add a Compendium Entry "Dire Wolf" to the Journal Entry		                                       	TEST in 1.2.3
+1. Embed actor references in a vanilla Journal Entry ; should re-render with QE dialog                  TESTED in 1.2.3, Foundry v12
+2. Open a vanilla Journal Entry, select tokens, and press the QE button to turn this into a QE -> ADD vs. CREATE dialog   TESTED in 1.2.3, Foundry v12
+3. Add a Compendium Entry "Dire Wolf" to the Journal Entry		                                       	TESTED in 1.2.3, Foundry v12
 
 ### METHOD 3 - add/remove tokens                                                        
-1. Open an existing QE with 1xActor; select 3 of the same tokens - should increase the number to 4      TEST in 1.2.3
-2. Change # to random (1d4+2)                                                                           TEST in 1.2.3
-3. Hover over Token in QE dialog and remove                                                             TEST in 1.2.3
+1. Open an existing QE with 1xActor; select 3 of the same tokens - should increase the number to 4      NOT COMBINING THE ENTRIES
+2. Change # to random (1d4+2)                                                                           TESTED in 1.2.3, Foundry v12
+3. Hover over Token in QE dialog and remove                                                             TESTED in 1.2.3, Foundry v12
 4. Hover over Tile in QE dialog and remove		                                                        TEST in 1.2.3
 
-## NEW FOUNDRY FEATURE: Multi-Page Journal Entries
-- Store a QE with a JE page (check stored per page)                                                     TEST in 1.2.3
-- Generate a QE from separate pages (check replaces old one)                                            TEST in 1.2.3
-- In JE "flow mode", all QEs should display                                                             TEST in 1.2.3
-- If a JE had a QE, that should display with the first page and be marked as "used"                     TEST in 1.2.3
+## Multi-Page Journal Entries
+- Store a QE with a JE page (check stored per page)                                                     TESTED in 1.2.3, Foundry v12
+- Generate a QE from separate pages (check replaces old one)                                            TESTED in 1.2.3, Foundry v12
+- In JE "flow mode", all QEs should display                                                             TESTED in 1.2.3, Foundry v12
+- If a JE had a QE, that should display with the first page and be marked as "used"                     TESTED in 1.2.3, Foundry v12
 - If a JE had a QE, it shouldn't display with subsequent pages                                          TEST in 1.2.3
 
 ### RUNNING QEs
-1. Open QE with QE Dialog and Run                                                                       TEST in 1.2.3
-2. Close Combat encounter: Show total XP and XP per player token to GM                                  TEST in 1.2.3
-3. Alt- or Ctrl- Run to force invisible or visible                                                      TESTED in 1.2.3
-4. Turn on "Show Add to CT" Module setting; clear for one Actor and check not included in CT            TEST in 1.2.3
-5. Turn off "Show Add to CT" Module setting and check all now included in CT                            TEST in 1.2.3
+1. Open QE with QE Dialog and Run                                                                       TESTED in 1.2.3, Foundry v12
+2. Close Combat encounter: Show total XP and XP per player token to GM                                  TTESTED in 1.2.3, Foundry v12
+3. Alt- or Ctrl- Run to force invisible or visible                                                      TESTED in 1.2.3, Foundry v12
+4. Turn on "Show Add to CT" Module setting; clear for one Actor and check not included in CT            TESTED in 1.2.3, Foundry v12
+5. Turn off "Show Add to CT" Module setting and check all now included in CT                            TESTED in 1.2.3, Foundry v12
 6. Check Tiles being added to Encounter                                                                 TEST in 1.2.3
 
 ### MAP NOTES
-1. Delete Note; should warn there is no Note when you open the Journal Entry                            TEST in 1.2.3
-2. Move Note - Generated Actor tokens (but not Saved) should be created at the position of the Note     TEST in 1.2.3
-3. Start on another Scene and run an Encounter - should switch scenes     					            TEST in 1.2.3 
-5. Delete the original Map Note and launch from a different Map Note (move Saved tokens)                TEST in 1.2.3
+1. Delete Note; should warn there is no Note when you open the Journal Entry                            NOT WARNING
+2. Move Note - Generated Actor tokens (but not Saved) should be created at the position of the Note     TESTED in 1.2.3, Foundry v12
+3. Start on another Scene and run an Encounter - should switch scenes     					            TESTED in 1.2.3, Foundry v12 
+5. Delete the original Map Note and launch from a different Map Note (move Saved tokens)                DOESN"T MOVE THEM (may be ok)
 7. Launch from the Journal Entry - should find a random Note or prompt to create one                    TEST in 1.2.3 (but doesn't run the QE)
-8. Delete the QE Journal Entry - should delete all the related Notes                                    TEST in 1.2.3
+8. Delete the QE Journal Entry - should delete all the related Notes                                    TESTED
+
 ### Hide/Show and ShowAuto setting                                                                      CHANGED in 1.1.0
 1. ShowAuto = Yes:
 1.1 New QE should show QE first and second time								
