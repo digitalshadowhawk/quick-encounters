@@ -2,10 +2,13 @@
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fquick-encounters&colorB=4aa94a)
 
 # Quick Encounters
+## 12 - Last planned release
+* QE v12 will support Foundry v10-v12, and will be the planned release
 ## 1.2
 * New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker
 * Support more generalized dice rolls see [#137](https://github.com/spetzel2020/quick-encounters/issues/137)
-* Compatible with Foundry v9 - v11
+* Compatible with Foundry v9 - v12
+* Bugs fixed: See [Release Notes](https://github.com/spetzel2020/quick-encounters/blob/master/CHANGELOG.md)
 ## 1.1
 * New features: Default folder for Quick Encounters (Issue #94), Add Actor RollTables from Journal Entries (Issue #40) - see new Settings
 * Bugs fixed: See [Release Notes](https://github.com/spetzel2020/quick-encounters/blob/master/CHANGELOG.md)

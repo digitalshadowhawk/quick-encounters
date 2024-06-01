@@ -4,12 +4,11 @@
 - [Milestone 12 enhancements](https://github.com/spetzel2020/quick-encounters/milestone/8)
 ## 1.2
 - New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker
-### 1.2.4
-- Planned: Bug fixes for [#141](https://github.com/spetzel2020/quick-encounters/issues/141), #128 , #124, #67
 ### 1.2.3
 - Initial support for Foundry v12
+- Fixed Foundry v12 compatibility: [#143](https://github.com/spetzel2020/quick-encounters/issues/143), [#142](https://github.com/spetzel2020/quick-encounters/issues/142)
 ### 1.2.2
-- Fixing [#137](https://github.com/spetzel2020/quick-encounters/issues/137) (support more generalized dice rolls)
+- Fixed [#137](https://github.com/spetzel2020/quick-encounters/issues/137) (support more generalized dice rolls)
 ### 1.2.1
 - Fixed [#139](https://github.com/spetzel2020/quick-encounters/issues/139) (filter for playerToken.actor === user.character)
 ## 1.1
