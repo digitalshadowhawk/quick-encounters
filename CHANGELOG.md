@@ -1,6 +1,7 @@
 # RELEASE NOTES
 ## 12
 - Planned: Support Foundry v10-12 (drop support for v9)
+- Last planned version
 - [Milestone 12 enhancements](https://github.com/spetzel2020/quick-encounters/milestone/8)
 ## 1.2
 - New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker

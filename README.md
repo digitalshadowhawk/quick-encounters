@@ -3,7 +3,7 @@
 
 # Quick Encounters
 ## 12 - Last planned release
-* QE v12 will support Foundry v10-v12, and will be the planned release
+* QE v12 supports Foundry v10-v12, and will be the last planned release of QE
 ## 1.2
 * New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker
 * Support more generalized dice rolls see [#137](https://github.com/spetzel2020/quick-encounters/issues/137)
@@ -19,8 +19,8 @@
 * Instant Encounters: Enable the new Setting, then you can drag your Quick Encounter directly from Journals to the Scene and be prompted to run it immediately! Perfect for Random or Wandering Encounters.
 
 * **Author**: Spetzel#0103
-* **Version**: 1.2.1 
-* **Foundry VTT Compatibility**: 9-11
+* **Version**: 12.1 
+* **Foundry VTT Compatibility**: 10-12
 * **System Compatibility (If applicable)**: All; additional features for dnd5e
 * **Translation Support**: en, es (thanks [lozalojo!](https://github.com/lozalojo)), ja (thanks "touge"!), de (thanks @Fallayn#6414), it (thanks [riccisi](https://github.com/riccisi))
 
