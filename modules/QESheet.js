@@ -45,6 +45,7 @@ Reused as EncounterCompanionSheet
 29-May-2023     1.1.5b: Changed isFoundryV10Plus to isFoundryV10PlusPlus (to support checks for Foundry V11)  
 15-Nov-2023     1.2.2a: Fixed #137: Support more generalized dice rolls by changing dieRollReg check to Roll.validate() in _updateObject()
 21-May-2023     1.2.3c: computeCombatantsForDisplay() calls await generateTemplateExtractedActorTokenData() (because that is now async)
+17-Jun-2024     12.1.0b: In v12, convert mergeObject to foundry.util.mergeObject
 */
 
 
@@ -76,15 +77,29 @@ export class QESheet extends FormApplication {
     /** @override  */
     //WARNING: Do not add submitOnClose=true because that will create a submit loop
     static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
-            //no longer setting id here because it gives the same element all the time- override get id() so we can have multiple QE JEs open
-            template : "modules/quick-encounters/templates/qe-sheet.html",
-            closeOnSubmit : false,
-            submitOnClose : false,
-            popOut : true,
-            width : 530,
-            height : "auto"
-        });
+        let mergedObject;
+        if (QuickEncounter.isFoundryV12Plus) {
+            mergedObject = foundry.utils.mergeObject(super.defaultOptions, {
+                //no longer setting id here because it gives the same element all the time- override get id() so we can have multiple QE JEs open
+                template : "modules/quick-encounters/templates/qe-sheet.html",
+                closeOnSubmit : false,
+                submitOnClose : false,
+                popOut : true,
+                width : 530,
+                height : "auto"
+            }); 
+        } else {
+            mergedObject = mergeObject(super.defaultOptions, {
+                //no longer setting id here because it gives the same element all the time- override get id() so we can have multiple QE JEs open
+                template : "modules/quick-encounters/templates/qe-sheet.html",
+                closeOnSubmit : false,
+                submitOnClose : false,
+                popOut : true,
+                width : 530,
+                height : "auto"
+            }); 
+        }
+        return mergedObject;
     }
 
 
