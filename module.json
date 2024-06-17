@@ -1,17 +1,17 @@
 {
   "name": "quick-encounters",
   "title": "Quick Encounters",
-  "description" : "<p>Keeps your Scene map clean and your encounters simple by saving tokens/Actors into Quick Encounter Journal Entries:</p><p><strong>This (v12.1) is the last planned version of QE! Thanks for all the fishes!</strong>Supports Foundry 10-12</p><br><ul><li>Design encounters by positioning and configuring Hostile tokens, then save the tokens into a Quick Encounter Journal Entry, marked with a single Map Note on the Scene which only you the DM see</li><li>Click the Run Quick Encounter button and all your saved tokens will be positioned back on the map and added to the Combat Tracker, ready to fight!</li><li>Run encounters from converted or packaged modules with embedded Actors</li><li>Easily scale-up encounters by changing 3 Zombies to 10 Zombies</li><li>Similar to the Encounter ability in Fantasy Grounds</li><li>For Roving Encounters move a single Map Note, not many tokens</li><li>Instant Encounters let you drag a Quick Encounter from Journals to the Scene and run it immediately</li><li>Flexible Settings control removing/leaving tokens, deleting all/defeated tokens after combat, and more!</li></ul>",
+  "description" : "<p>Keeps your Scene map clean and your encounters simple by saving tokens/Actors into Quick Encounter Journal Entries:</p><p><strong>NEW in v1.2:</strong>Supports Foundry 9-11</p><p>Issue 123: New option to automatically add Player Tokens to the Combat Tracker/p><br><ul><li>Design encounters by positioning and configuring Hostile tokens, then save the tokens into a Quick Encounter Journal Entry, marked with a single Map Note on the Scene which only you the DM see</li><li>Click the Run Quick Encounter button and all your saved tokens will be positioned back on the map and added to the Combat Tracker, ready to fight!</li><li>Run encounters from converted or packaged modules with embedded Actors</li><li>Easily scale-up encounters by changing 3 Zombies to 10 Zombies</li><li>Similar to the Encounter ability in Fantasy Grounds</li><li>For Roving Encounters move a single Map Note, not many tokens</li><li>Instant Encounters let you drag a Quick Encounter from Journals to the Scene and run it immediately</li><li>Flexible Settings control removing/leaving tokens, deleting all/defeated tokens after combat, and more!</li></ul>",
   "authors": [
     {
       "name": "Spetzel"
     }
   ],
-  "version": "12.1.0",
-  "minimumCoreVersion": "10",
+  "version": "1.2.3",
+  "minimumCoreVersion": "9",
   "compatibleCoreVersion": "12",
   "compatibility": {
-    "minimum": "10",
+    "minimum": "9",
     "verified": "12"
   },
   "languages": [
@@ -49,6 +49,6 @@
   "bugs": "https://github.com/spetzel2020/quick-encounters/issues",
   "changelog": "https://github.com/spetzel2020/quick-encounters/blob/master/CHANGELOG.md",
   "manifest": "https://github.com/spetzel2020/quick-encounters/releases/latest/download/module.json",
-  "download": "https://github.com/spetzel2020/quick-encounters/releases/download/v12.1.0/quick-encounters.zip",
+  "download": "https://github.com/spetzel2020/quick-encounters/releases/download/v1.2.3/quick-encounters.zip",
   "url": "https://github.com/spetzel2020/quick-encounters"
 }
