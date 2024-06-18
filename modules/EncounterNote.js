@@ -47,7 +47,8 @@ Subsequently can add: (a) Drag additional tokens in, (b) populate the Combat Tra
                 Re-clone _onDropData() from foundry.js to account for new Note fields (for JournalEntryPage)
 29-May-2023     1.1.5b: Changed isFoundryV10 to isFoundryV10Plus (to support checks for Foundry V11)    
 21-May-2024     1.2.3d: v12: Switch (optionally) to new foundry.utils.mergeObject()  
-23-May-2024     1.2.3e: class EncounterNote: Move icon and iconTint into texture (supposedly deprecated since v10)      
+23-May-2024     1.2.3e: class EncounterNote: Move icon and iconTint into texture (supposedly deprecated since v10) 
+17-Jun-2024     12.1.0d:Replace cls.create() with getDocumentClass("cls").create     
 */
 
 //Expand the available list of Note icons
@@ -425,13 +426,17 @@ Hooks.on(`dropCanvasData`, (canvas, data) => {
     // Acquire Journal entry 
     //- because it's async and this hook can't be (otherwise it prematurely returns true and creates a preview) use .then chaining
     //1.1.5 check for either JournalEntry OR JournalEntryPage
-    if (data?.type === "JournalEntry") {
-        JournalEntry.fromDropData(data).then(journalEntry => {
-            EncounterNote.checkForQEAndCreateNote(journalEntry, data);
-        });
-    } else if (data?.type === "JournalEntryPage") {
-        JournalEntryPage.fromDropData(data).then(journalEntryPage => {
-            EncounterNote.checkForQEAndCreateNote(journalEntryPage, data);
+    if ((data?.type === "JournalEntry") || (data?.type === "JournalEntryPage")) {
+        let cls;
+        if (QuickEncounter.isFoundryV12Plus) {
+            cls = getDocumentClass(data?.type);
+        } else if (data?.type === "JournalEntry") {
+            cls = JournalEntry;
+        } else if (data?.type === "JournalEntryPage") {
+            cls = JournalEntryPage;
+        }
+        cls.fromDropData(data).then(j => {
+            EncounterNote.checkForQEAndCreateNote(j, data);
         });
     } else {return true;}   //handle dropping something else
     return false;   //stop processing - we're replacing Journal Note creation entirely

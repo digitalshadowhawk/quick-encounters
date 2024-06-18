@@ -261,6 +261,7 @@
 28-May-2024     1.2.3f: createFrom: Check for journalEntryPage0 not defined and create 
                 1.2.3g: Add text.content to journalEntryPage0 creation ( description of added QE)     
 17-Jun-2024     12.1.0c: createCombat(): For Foundry v12 just use TokenDocument.implementation#createCombatants()
+                12.1.0d: Replace cls.create() with getDocumentClass("cls").create
 */
 
 
@@ -702,7 +703,7 @@ export class QuickEncounter {
             types: "base"
         }
         //0.9.2a: Per ironmonk88, activate:false tells Enhanced Journals to not pop up the new JE yet (because there's a sheet render below)
-        let journalEntry = await JournalEntry.create(journalData, {activate: false});
+        let journalEntry = QuickEncounter.isFoundryV12Plus ? await getDocumentClass("JournalEntry").create(journalData, {activate: false}) : await JournalEntry.create(journalData, {activate: false});
         let qeJournalEntry = journalEntry; //the Journal Entry or JournalEntryPage we will store the QE with
         //1.0.4l: In Foundry v10, we want to make this the first JournalEntryPage
         if (QuickEncounter.isFoundryV10Plus) {
@@ -717,7 +718,8 @@ export class QuickEncounter {
                         content: content,
                         format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML}
                 }
-                journalEntryPage0 = await JournalEntryPage.create(journalEntryData, {parent: journalEntry, pack: null, renderSheet:false });
+                //Issue #144: Should use getDocumentClass instead of class names directly
+                journalEntryPage0 = await getDocumentClass("JournalEntryPage").create(journalEntryData, {parent: journalEntry, pack: null, renderSheet:false });
             }
             if (journalEntryPage0) {qeJournalEntry = journalEntryPage0;}
         }
@@ -936,7 +938,7 @@ export class QuickEncounter {
             type: "encounter",
             types: "base"
         }
-        let journalEntry = await JournalEntry.create(journalData);
+        let journalEntry = QuickEncounter.isFoundryV12Plus ? await getDocumentClass("JournalEntry").create(journalData) : await JournalEntry.create(journalData);
 
         const ejSheet = new JournalSheet(journalEntry);
         ejSheet.render(true);
@@ -2081,7 +2083,11 @@ Hooks.on('closeJournalSheet', async (journalSheet, html) => {
         if (game.journal.get(journalEntry.id)) {
             //v0.8.3: Switch to use JournalEntry.deleteDocuments(ids)
             if (QuickEncounter.isFoundryV8Plus) {
-                await JournalEntry.deleteDocuments([journalEntry.id]);
+                if (QuickEncounter.isFoundryV12Plus) {
+                    await getDocumentClass("JournalEntry").deleteDocuments([journalEntry.id])
+                } else {
+                    await JournalEntry.deleteDocuments([journalEntry.id]);
+                }
             } else {//Foundry v0.7
                 await JournalEntry.delete(journalEntry.id);
             }
