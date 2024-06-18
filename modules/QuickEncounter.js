@@ -259,7 +259,8 @@
                 1.2.3c: Changed r.evaluate() to async calls because of Roll() changes
                 1.2.3d: Added isFoundryV12Plus
 28-May-2024     1.2.3f: createFrom: Check for journalEntryPage0 not defined and create 
-                1.2.3g: Add text.content to journalEntryPage0 creation ( description of added QE)               
+                1.2.3g: Add text.content to journalEntryPage0 creation ( description of added QE)     
+17-Jun-2024     12.1.0c: createCombat(): For Foundry v12 just use TokenDocument.implementation#createCombatants()
 */
 
 
@@ -1630,50 +1631,54 @@ export class QuickEncounter {
 
     static async createCombat(encounterTokens) {
         if (!encounterTokens || !encounterTokens.length) {return;}
+        const tabApp = ui.combat;
 
-        
-        //FIX: Refactor: Should refactor into two large paths for Foundry 0.7 VS. 0.8 & 0.9
+        if (QuickEncounter.isFoundryV12Plus) {
+            //In v12, don't control tokens and toggle combat state - just use createCombatant()
+            //Modeled after Foundry v12 deprecated toggleCombat
+            TokenDocument.implementation.createCombatants(encounterTokens.filter(t => t.addToCombatTracker));
 
-        //0.9.3d Find the first token to be added to the Combat Tracker and work around that
-        let firstAddedToCT = null; 
+        } else {//Foundry v11 and before
+            //0.9.3d Find the first token to be added to the Combat Tracker and work around that
+            let firstAddedToCT = null; 
 
-        let tokenObject;
-        for (const token of encounterTokens) {
-            if (QuickEncounter.isFoundryV8Plus) {//0.8.0e: 
-                tokenObject = token.object;
-            } else {//Foundry 0.7.x
-                tokenObject = token;
-            }      
-            //0.9.3d: Only add to Combat Tracker if addToCombatTracker set (the default)      
-            //Control the tokens (because that is checked in adding them to the Combat Tracker)
-            if (token.addToCombatTracker) {
-                if (!firstAddedToCT) {
-                    //But release any others first (so that we don't inadvertently add them to combat) using the "first" one arbitrarily
-                    firstAddedToCT = tokenObject;
-                    firstAddedToCT.control({releaseOthers : true, updateSight : false, pan : true});
+            let tokenObject;
+            for (const token of encounterTokens) {
+                if (QuickEncounter.isFoundryV8Plus) {//0.8.0e: 
+                    tokenObject = token.object;
+                } else {//Foundry 0.7.x
+                    tokenObject = token;
+                }      
+                //0.9.3d: Only add to Combat Tracker if addToCombatTracker set (the default)      
+                //Control the tokens (because that is checked in adding them to the Combat Tracker)
+                if (token.addToCombatTracker) {
+                    if (!firstAddedToCT) {
+                        //But release any others first (so that we don't inadvertently add them to combat) using the "first" one arbitrarily
+                        firstAddedToCT = tokenObject;
+                        firstAddedToCT.control({releaseOthers : true, updateSight : false, pan : true});
+                    }
+                    tokenObject.control({releaseOthers : false, updateSight : false});
                 }
-                tokenObject.control({releaseOthers : false, updateSight : false});
+            }
+
+            //Load the recovered tokens into the combat Tracker
+            //Only have to toggle one of them to add all the controlled tokens
+            if (firstAddedToCT) await firstAddedToCT.toggleCombat();
+
+             //Now release control of them as a group, because otherwise the stack is hard to see             
+            for (const token of encounterTokens) {
+                if (QuickEncounter.isFoundryV8Plus) {//0.8.0e: 
+                    tokenObject = token.object;
+                } else {//Foundry 0.7.x
+                    tokenObject = token;
+                } 
+                tokenObject.release();
             }
         }
 
-        //Load the recovered tokens into the combat Tracker
-        //Only have to toggle one of them to add all the controlled tokens
-        if (firstAddedToCT) await firstAddedToCT.toggleCombat();
-
+        //Pop-open the floating combat tracker
         //0.6: Moved after toggling combat in case that actually creates the combat entity
-        const tabApp = ui.combat;
         tabApp.renderPopout(tabApp);
-        //If the tokens are not on the Scene then add them
-
-        //Now release control of them as a group, because otherwise the stack is hard to see             
-        for (const token of encounterTokens) {
-            if (QuickEncounter.isFoundryV8Plus) {//0.8.0e: 
-                tokenObject = token.object;
-            } else {//Foundry 0.7.x
-                tokenObject = token;
-            } 
-            tokenObject.release();
-        }
 
     }
 
