@@ -262,6 +262,7 @@
                 1.2.3g: Add text.content to journalEntryPage0 creation ( description of added QE)     
 17-Jun-2024     12.1.0c: createCombat(): For Foundry v12 just use TokenDocument.implementation#createCombatants()
                 12.1.0d: Replace cls.create() with getDocumentClass("cls").create
+19-Jun-2024     12.1.1a: Issue #146:  showTutorialJournalEntry: In Foundry v12 create a Journal Entry Page for the tutorial
 */
 
 
@@ -270,7 +271,7 @@ import {QESheet} from './QESheet.js';
 
 export const QE = {
     MODULE_NAME : "quick-encounters",
-    MODULE_VERSION : "1.2.3",
+    MODULE_VERSION : "12.1.1",
     TOKENS_FLAG_KEY : "tokens",
     QE_JSON_FLAG_KEY : "quickEncounter",
     ACTOR : "Actor"
@@ -928,7 +929,6 @@ export class QuickEncounter {
         //Create a new JournalEntry - with info on how to use Quick Encounters
         const howToUseJournalEntry = await renderTemplate('modules/quick-encounters/templates/how-to-use.html');
         const title =  game.i18n.localize("QE.HowToUse.TITLE");
-
         const content = howToUseJournalEntry;
 
         const journalData = {
@@ -938,7 +938,20 @@ export class QuickEncounter {
             type: "encounter",
             types: "base"
         }
-        let journalEntry = QuickEncounter.isFoundryV12Plus ? await getDocumentClass("JournalEntry").create(journalData) : await JournalEntry.create(journalData);
+        const journalEntry = await getDocumentClass("JournalEntry").create(journalData);
+
+        if (QuickEncounter.isFoundryV12Plus) {
+            //v12.1.1: In Foundry v12 it doesn't appear to create a Journal Entry Page by default
+            const journalEntryData = {
+                name: journalEntry.name,
+                sort: 100000,
+                type: "text",
+                text: {
+                    content: content,
+                    format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML}                
+            }
+            const journalEntryPage = await getDocumentClass("JournalEntryPage").create(journalEntryData, {parent: journalEntry, pack: null, renderSheet:false});
+        }
 
         const ejSheet = new JournalSheet(journalEntry);
         ejSheet.render(true);

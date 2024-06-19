@@ -1,8 +1,12 @@
 # RELEASE NOTES
 ## 12
-- Planned: Support Foundry v10-12 (drop support for v9)
+- Supports Foundry v10-12 (drops support for v9)
 - Last planned version
-- [Milestone 12 enhancements](https://github.com/spetzel2020/quick-encounters/milestone/8)
+- Fixed [#146](https://github.com/spetzel2020/quick-encounters/issues/146) (Tutorial not showing)
+- Fixed [#136](https://github.com/spetzel2020/quick-encounters/issues/136)
+- Fixed [#144](https://github.com/spetzel2020/quick-encounters/issues/144)
+- Fixed [#142](https://github.com/spetzel2020/quick-encounters/issues/142) Cannot create QE from selected tokens
+- Closed [#133](https://github.com/spetzel2020/quick-encounters/issues/133)
 ## 1.2
 - New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker
 ### 1.2.3

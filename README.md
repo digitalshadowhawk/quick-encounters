@@ -4,6 +4,7 @@
 # Quick Encounters
 ## 12 - Last planned release
 * QE v12 supports Foundry v10-v12, and will be the last planned release of QE
+* Bugs fixed: See [Release Notes](https://github.com/spetzel2020/quick-encounters/blob/master/CHANGELOG.md)
 ## 1.2
 * New feature: [#123](https://github.com/spetzel2020/quick-encounters/issues/123): New option to automatically add Player Tokens to the Combat Tracker
 * Support more generalized dice rolls see [#137](https://github.com/spetzel2020/quick-encounters/issues/137)
