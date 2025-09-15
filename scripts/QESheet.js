@@ -1,4 +1,5 @@
-import {QuickEncounter, dieRollReg, QE} from './QuickEncounter.js';
+import {QuickEncounter, QE} from './QuickEncounter.js';
+import {dieRollReg} from './constants.js';
 
 /*
 Reused as EncounterCompanionSheet

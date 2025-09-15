@@ -1,273 +1,7 @@
-/*
-27-Aug-2020     Created
-31-Aug-2020     Switch to creating a Journal Entry and then dragging it to the map for the saved Encounter
-3-Sep-2020      Try simpler approach, starting with cleaner creation of a Quick Encounter Journal
-3-Sep-2020      0.0.3: onClose, check that we don't have a note in the VIEWED scene and then place one
-                Save tokens as an array rather than individuals
-11-Sep-2020     Have a Create Quick Encounter and Run Quick Encounter button
-                If nothing is selected, then pop open a help Dialog - perhaps with an offer to create a template Journal Entry
-                Add imports from foundry.js to improve linting
-                NOTE: We search the candidate Journal Entries on the fly (in the future, potentially even without opening them)
-                An alternative would be to hook on renderJournalSheet and flag it there if it has Actors; might be marginally faster
-12-Sep-2020     create() deletes the token from the canvas, not just the token
-                runFromJournal doesn't create a token, just puts the tokenData in the Journal
-                (and then the create() creates the tokens from the Journal)
-                Split createCombat into createTokens and createCombat so that Method 1 and Method 2 are more modular
-13-Sep-2020     Slightly adjust the position of the dropped tokens around the base corner of the map Note
-14-Sep-2020     Add template info for Encounters - the Journal Entry is shown and then auto-deleted if you don't change it
-                0.3.4: Extract Actor information when closing and update the Journal Entry flags
-                This can then also trigger storing the Scene if you open the Journal Entry from a Note
-                We'd like to record embedded Actors on rendering but that creates a render loop (because setFlag -> refresh -> render)
-                So instead we record them on close
-                Have to use a timer to wait for the window to be fully closed
-15-Sep-2020     v0.4.0: Because deleting a Journal Entry triggers a close of any related Journal Sheet, we have to check in the close Hook
-                that we don't delete the Tutorial if it already is deleted
-                - Replace forEach with for/of to remove async operation ambiguities
-                - Ask Before switching Views
-15-Sep-2020     v0.4.0: Refactor to make flow identical for Method 1 or Method 2 (just use saved tokens preferentially)
-                v0.4.1 on closeJournalSheet, if we don't find a Map Note then create one
-16-Sep-2020     v0.4.1: findCandidateJournalEntry return open sheets without mapNotes
-                Pop a dialog if there's no corresponding map note found
-                When you drag in tokens, summarize the number of each Actor and (5e) display XP
-20-Sep-2020     v0.4.2: extractActors(): Extract # of Actors using previousSibling because parent is confused by having a sentence with a number
-                Also, whisper the Total XP to the GM, not to everybody
-21-Sep-2020     v0.4.2: Ignore Friendly tokens which might be selected (typically PCs) - this should probably be an option/dialog
-25-Sep-2020     v0.5.0: Dialog to check if you want friendlies in your Quick Encounters
-26-Sep-2020     v0.5.0: If you previously saved a token to the Encounter, "freeze" its data by updating it back to the saved value
-                (This handles the case of Token Mold or other modules adusting its data)
-                v0.5.0: Remove putting XP in chat - just put it before the activation button in the Journal Entry
-                v0.5.0: Add switchToMapNoteScene() - waits for up to 2s to find the map Note in the other scene
-                v0.5.0: Add the Quick Encounters button dynamically when you render the Journal Entry, regardless of Method 1 or 2
-                0.5.0 Token.create() was returning a single token if you passed in a single-element array of token data; fixed to check
-27-Sep-2020     v0.5.1: Increase the timeout when waiting for tokens to draw before adding to the Combat Tracker
-                v0.5.1: run(): Uses saved Tokens if they exist, but otherwise supplements with created ones from the embedded Actors
-28-Sep-2020     v0.5.1: Method 1: Put per opponent XP next to each Actor and then (always) put total XP with the button
-29-Sep-2020     v0.5.1: FIXED: findOpenQETutorial(): Use Journal Entry name to match instead of jQuery
-                v0.5.1: Create a separate dynamic section at the top of a Quick Encounter Journal Entry
-3-Oct-2020      v0.5.3: FIXED: If you have the Tutorial Journal Entry open and try to save a Journal Entry and then close it, it will delete the Journal ENTRY
-                - because it's searching the WHOLE DOM for QuickEncountersTutorial, not just the particular Journal SHeet being closed
-                v0.5.3: FIXED: Remove any existing versions of the dynamic QE Journal button first before recomputing it
-                    (because in Foundry v0.7.3 if you save with it, it will get added to the underlying content)
-5-Oct-2020      v0.5.3b: Make templates/how-to-use.html based on lang phrases to make translation easier
-                Remove QE.ERROR.HowToUse (unused) and rename QE.TITLE.HowToUse to QE.HowToUse.TITLE for consistency
-                Rename QE.BUTTON.CreateQuickEncounter to QE.CreateQuickEncounter.BUTTON
-                v0.5.3c: No longer asks every time you open a Quick Encounter whether you want a Map Note, instead:
-                - Puts a warning in the QE dynamic section
-                - Asks you when you go to run it (already did this)
-                v0.5.3d: Add option to "freeze" captured tokens so that TokenMold doesn't regenerate HP, name, etc
-                (Default is true so that only newly generated tokens are changed )
-12-Oct-2020     v0.6.0: Allow Quick Encounters to use Compendium links
-15-Oct-2020     v0.6.0c: Handle multipliers that are dice rolls, e.g. 1d4+2 Vampire Spawn
-                (Note they must be in Foundry [[/r 1d4+2]] form  to be recognized)
-15-Oct-2020     v0.6.1: Prototype embedded vs companion dialog methods
-6-Nov-2020      v0.5.5:  When you close/delete the Combat Tracker, pop up a dialog with info about the XP and XP per Player token
-                Add a config option to turn this on/off (displayEncounterXPAfterCombat) provided this is DND5E
-                Remove implicit localize in name&hint for config options
-7-Nov-2020      v0.5.5: Rename putXPInChat to computeTotalXP      
-                v0.5.5b: Tweak the dialog
-9-Nov-2020      v0.6.1b: Use optional chaining to reduce chained tests for null                
-                v0.6.1d: Add isSavedToken flag to generated tokens to distinguish between those generated from Actors and those saved
-                createTokenDataFromActors(): Added setting isSavedToken=false
-                Removed frozen flag and push that into createTokens where we can use isSavedToken
-                NOTE: There should be no upgrade issue here since we do not save this flag - we regenerate it from saved tokenData
-                - Increase random placing of generated (not saved) tokens to +/- one full grid square
-                - Refactor Map Note related functions to EncounterNote: switchToMapNoteScene(), noMapNoteDialog(), mapNoteIsPlaced()
-11-Nov-2020     v0.6.1f: runFromEmbeddedButton: REMOVED (replaced with direct call since we always have the quickEncounter)   
-                v0.6.1g: REMOVED addTokenDataToJournalEntry() - one-liner only called from one other function     
-                v0.6.1h: More o.o. approach with QuickEncounter instantiation - but allow for backward compatibility        
-                If you have token(s) selected AND a Quick Encounter Journal Entry open, ask if you want to run it or add the token to it
-                Added QEDialog.buttons3() for 3-button dialog
-12-Nov-2020     v0.6.1j: Refactor createFromTokens() into create JournalEntry and call to new instance method addTokens()    
-                Remove extractedActorTokenData as a class parameter and make it generated (either in template or full form)           
-                - generateTemplateExtractedActorTokenData() or generateFullExtractedActorTokenData() (renamed from createTokenDataFromActors)
-                - make combineTokenData() an instance method
-13-Nov-2020     0.6.1k: createOrRun(): RENAMED to runAddOrCreate()    
-                addTokens(): Add udpateJournalEntryById() to serialize updated quickEncounter  
-                extractQuickEncounter(): If quickEncounter is stored, then use that  
-                serialize/deserialize QuickEncounter using JSON    
-14-Nov-2020     0.6.1l: update(): ADDED to receive changes from Companion dialog
-15-Nov-2020     0.6.1m: Alt-Run makes all tokens invisible; Ctrl-Run makes them all Visible
-                0.6.1n: If we removed all the Actors, then remove the whole Quick Encounter
-                0.6.1o: init(): Remove localized version of QE.Version (which can't be read at this point); add MODULE_VERSION
-                Store MODULE_VERSION in the Quick Encounter qeData just in case we make future changes to how it's encoded
-                deserializeFromJournalEntry(): Push savedTokensData into extractedActors
-                extractQuickEncounter(): Code old method with qeVersion=0.5
-                v0.6.2a: addTokens(): Ignore undefined savedTokens from old method
-                Make useEmbeddedMethod=false the default going forward
-                v0.6.2b: Bug fix: Use game.scenes.viewed to populate the name of the created Journal Entry
-                Add a try/catch around tokens.update (because of problems with missing data)
-                v0.6.3: Switch Use Embedded OPtion to Use Companion Dialog option
-16-Nov-2020     v0.6.3b: onDeleteCombat(): Round computed XP per player    
-17-Nov-2020     v0.6.4: Method 3: Open a vanilla Journal Entry and ask if you want to add selected tokens to it   
-                QEDialog.buttons3: Remove the 3rd button if the 3rd callback isn't provided    
-18-Nov-2020     v0.6.4c: Tweaked test for extractedActorIndex to not take this path on 0
-                getNumActors: Now takes rollType parameter "full" (which rolls randomly) or "template" which rolls
-27-Nov-2020     v0.6.7: BUG: 0.6.5: Wildcard Randomization doesn't work when placing tokens using Method 2   
-                generateFullExtractedActorTokenData(): Call Token.fromActor() which does the merge but also handles wildcard token images 
-28-Nov-2020     v0.6.8: BUG: If you have a Journal Entry with multiple DIFFERENT mentions of the same creature, you get combinatorial multiplication of tokens etc.                            
-                Change expandedTokensData to generatedTokensData and make it per extractedActor (in the same wau the savedTokenData is)
-                addTokens(): Search the actor list to see if there's another Actor to add tokens to
-                constructor(): Always provide a (possibly empty) savedTokensData array
-30-Nov-2020     v0.6.9: Bug: When you add tokens to an existing QE with that Actor, it should fill in all generatedTokens and then increase numActors  
-                addTokens(): Add remaining tokens to the 0th element for this actorId; 
-                Analyze the added tokens only (was previously adding existing tokens en masse which doesn't work for multiple instances of the same Actor)          
-1-Dec-2020      v0.6.10: First attempt to reuse the existing QE dialog (not using app.id)  
-                v0.6.11:   Fixed bug: If you were using a die roll, added tokens were added twice    
-5-Dec-2020      v0.6.13: Add this.clickedNote. Set QuickEncounter.hoveredNote in Hook.hoverNote and then transfer to this.clickedNote if the Journal Entry matches
-6-Dec-2020      v0.6.13c: Keep the same clickedNote as long as the JE is open (even if you hover somewhere else)
-7-Dec-2020      v0.6.13f: Apply shift between sourceNote and originalNote (if present) to shift tokens
-                (Note that we cannot compare savedTokens[0] coords because we might have moved the original note)
-8-Dec-2020      v0.6.13h: checkAndFixOriginalData(): For backward compatibility, if we can recover the originalNote (because it's coordinates
-                match one of the tokens) - then do so  
-11-Jan-2021     0.7.0a: Namespace constants with QE structure    
-                Remove the option to not use the QE Dialog     
-                0.7.0b: First cut at saving tiles as well as tokens 
-14-Jan-2021     Have to (for now) add the QE button to the Tiles menu - would be better if it created a non-modal dialog that you could use for other assets
-                Check throughout for extractedActors?.length (in case you only have tiles)
-19-Jan-2021     0.7.0d: Set QE coords from tokens, or if not set, from Tiles
-20-Jan-2021     0.7.1a: Fixed: If you run an Encounter and then try to edit the setting, will choke on the JSON save (because of sourceNote)
-                - save as sourceNoteData instead
-                Move shift calculation to run() and pass to createTokens and createTiles
-6-Feb-2021      0.7.3a: Add Setting: Automatic QE on Embedded Actors (open QE with any JE with embedded Actors, even if you haven't saved tokens/tiles)                
-                Always put a Show QE button on the JE dialog (in case you close it)
-                0.7.3b: Put a Hide QE button on the QE Dialog
-7-Feb-2021      0.7.3c: Initialize hideQE null       
-                Add journalEntry.showQEOnce to force showing on creation   
-                0.7.3e: Re-extract the quickEncounter at show button press time, because otherwise if a QE was created from the HTML, it is not available at button creation time
-29-Mar-2021     0.8.0b: If you are viewing the Journal Entry directly out of a Compendium, make a read-only QE dialog without token placement operations
-                and instructions about how to use it
-25-May-2021     0.8.0c: Testing with Foundry 0.8.5: (but will need to verify/edit for Foundry 0.7.x)
-                    - TOKEN_DISPOSITIONS -> CONST.TOKEN_DISPOSITIONS                
-                    - canvas.tiles no longer exists; replace with Tile.layer.controlled or Tile.layer.placeables as appropriate
-                    - replace deleteMany with canvas.scene.deleteEmbeddedDocuments()
-                0.8.0d: createCombat(): Adjust for Token object now being on TokenDocument.object
-27-May-2021     0.8.0e: Test for 0.8.x vs 0.7.x and use new methods accordingly                
-                - constructor(): Check this.extractedActors (was failing on iteration is extractedActors was null because of old QE method)
-28-May-2021     0.8.0f: Use TOKEN_DISPOSITIONS or CONST.TOKEN_DISPOSITIONS as appropriate     
-5-Jun-2021      0.8.1a: Fixed: Issue #43: onDeleteCombat() was not correctly computing nonFriendlyNPCTokens using t.token.data    
-2-Aug-2021      0.8.2a: Fixed: Issue #46: : Reducing and then increasing the number of placed tokens creates ghost tokens
-                - generateExpandedTokenData() - needed to call actor.getTokenData() to correctly set token info      
-                0.8.2b: run(): Switch background/foreground and create relevant tiles
-                addTiles(): Store .layer ("background" or "foreground" or undefined)
-3-Aug-2021      0.8.2c: createTokens()  - set hidden flag before creating tokens; this seems to correctly override saved tokens but still not the generated ones
-8-Aug-2021      0.8.3a: #50 v0.8.2: getEncounterScene() is failing because of the new structure of scene.notes
-                - if Foundryv8 check scene.notes map
-                0.8.3b: #49: generateFullExtractedActorTokenData() was storing the full TokenData() object with prototypes (it used to be just a simple object of data)
-                Used Object.fromEntries(Object.entries(tokenData)) to strip off non own properties
-9-Aug-2021      0.8.3c: generateFullExtractedActorTokenData(), addTokens(), addTiles(): 
-                Use toObject() to recover just the object (ownProperties) before duplication   
-10-Aug-2021     0.8.3d: Hooks.on('closeJournalSheet'): Switch to JournalEntry.deleteDocuments(ids) to delete Tutorial JE on close   
-25-Aug-2021     0.8.4: Issue #52: generateFullExtractedActorTokenData(): Don't use toObject() if Foundry 0.7.x                          
-26-Aug-2021     0.8.4b: Fix for other problems with reference to toObject() in Foundry 0.7.x
-13-Sep-2021     0.9.0: Support Foundry 0.8+ only; new features
-26-Oct-2021     0.9.0b: Issue #53 (Add option to delete added tokens after the Combat Encounter)
-                0.9.0c: Rename nonFriendlyNPCTokens to hostileNPCCombatants for accuracy
-28-Oct-2021     0.9.0d: Issue #54 (Option to "record" the tokens but leave them on the map and then just add them to the CT)
-                Issue #34 (Feature request: Add option to not add the combatants to the tracker #34)
-                - Multiple options: Leave/Delete + Add/Don't Add to CT
-                See https://github.com/spetzel2020/quick-encounters/issues/55#issuecomment-954239542 for thoughts
-1-Nov-2021      0.9.0e Visual representation of tokens that are part of the Quick Encounter but are still on the Scene
-                (and therefore shouldn't be regenerated)
-                Also, CURRENT approach generates tokens if they don't already exist - ALTERNATIVE would be to record the tokens you Deleted
-                and only regenerate those
-9-Nov-2021      0.9.0g: Change the Show Delete Tokens after Add setting to be a simple "Delete the Tokens on the Scene" - if cleared you have to delete them manually
-15-Nov-2021     0.9.1a: Merged in https://github.com/spetzel2020/quick-encounters/pull/59 (ironmonk88, fixes to work with Monk's Enhanced Journal)
-                0.9.1b: Fix Issue #63 (wasn't freezing a captured token from further change)
-                0.9.1d: Fix Issue #61: Move the Encounter opponents to the top of the JE (so in PinCushion the preview will show them)
-16-Nov-2021     0.9.2a: "Fix" Issue #62: Suppress MEJ popping up JE so it will happen on the explicit JE render (except now you just get the orphan Journal Sheet without MEJ)   
-6-Dec-2021      0.9.3a: Merged Spanish translation
-                        Expand Foundryv8 checks for both 0.8 and 0.9
-                0.9.3b: New setting for "Show Add to CT checkbox"  (showAddToCombatTrackerCheckbox); added English tags    
-14-Dec-2021     0.9.3d: Plumb "Add to CT" checkbox - persist in QE structure (as part of extractedActors) and use in:
-                createTokens(): spread either true or the extractedActor setting to the token data and then we have to copy to all the tokens
-                createCombat(): add token to the Combat Tracker if addToCombatTracker set (the default)
-15-Dec-2021     0.9.3f: Fix this deprecation error  at QuickEncounters#1173 You are calling PlaceableObject.create which has been deprecated in favor of Document.create or Scene#createEmbeddedDocuments.
-21-Dec-2021     0.9.5a: In init, set the QuickEncounter.isFoundryV8Plus variable for choosing different code-paths/data models
-1-Jan-2022      0.9.6b: Tile.layer no longer exists; must look at canvas.foreground and canvas.background
-11-Jan-2022     0.9.7a: extractActors(): Lingering use of dataPack.entity; Fix Issue #77
-31-Jan-2022     0.9.8a: getNumActors(): Add async:false to Roll.evaluate() to keep synchronous; we can also change this to an await-ed call
-3-Feb-2022      0.9.9a: Fixed: Issue #79 (Issue adding tiles to quick encounter ): Convert deprecated Tile.create() to Scene#createEmbeddedDOcuments()
-8-Feb-2022      0.9.10a: Fixed Issue #81 (Run Encounter from Compendium fails) using PR#80 (thanks https://github.com/jsabol)
-                (Also checks for existing Actor before importing)
-10-Feb-2022     0.9.10b: Typo in first parameter of importFromCompendium(); should be pack object, not pack name   
-17-Feb-2022     1.0.1a: Split out inner extractQuickEncounterFromJE() so we can call from Note creation
-26-Feb-2022     1.0.1d: Accept new options parameter to QuickEncounter.run() and override map check if options.isInstantEncounter
-                Trying to fix: If you didn't have a Map Note, and were prompted to create one, didn't then run the QE
-25-Apr-2022     1.0.2a: Issue 88: Alt- and Ctrl- accelerators should work with the Run Instant Encounter button 
-                Override the click and submit so we can pass the event (and eventually determine if Ctrl- or Alt- were used)  
-5-May-2022      1.0.3a: First cuts for Foundry v10
-                init(): Set QuickEncounter.isFoundryV10Plus; extractActors(): look for content-link (changed from entity-link) and other changes
-                1.0.3b: generateFullExtractedActorTokenData(): Yet another way to strip tokenData of prototype information so it can be duplicated
-8-Aug-2022      1.0.4b: generateFullExtractedActorTokenData(): Under Foundry v10 skip new TokenDocument() call because Actor.getTokenData() already returns a TokenDocument
-                1.0.4c: Issue #92: Foundry v10 Testing 3 (Build 277): A QE is no longer generated from a Journal Entry with embedded Actors
-                Added a hook on renderJournalPageSheet and new instance method buildQEDialog()     
-15-Aug-2022     1.0.4d: extractActors(): Strip off "Actor." prefix from UUID (because our later lookup is only an Actor one)   
-29-Aug-2022     1.0.4e: onRenderJournalPageSheet(): To handle new (Foundry v10) and pre-multi-page Journals we check:
-                    1. Is there an embedded Quick Encounter in the Journal Page Sheet
-                    2. Is there an embedded Quick Encounter in the parent Journal Sheet
-                    3. Is there a Quick Encounter which can be generated from the embedded Actors in the Page
-                    4. (Not in this hook, but for Foundry <=v9) Extract QE from embedded Actors in the Journal Sheet     
-                1.0.4g: Convert serializeIntoJournalEntry to use journalEntry or journalEntryPage      
-                displayQEDialog() now passes journalSheet.title to new QEDialog()  
-31-Aug-2022     1.0.4j: Serialize QE into Journal Page (Foundry v10)
-                Pass qeJournalEntry to QESheet so it can be passed back for remove()
-                Set journalEntry in qeData (but make sure in serialize to null before serializing the whole JE object into JE)   
-                1.0.4k: getEncounterScene should look for Journal Entry instead of Journal Entry Page   
-1-Sep-2022      1.0.4k: Move getEncounterScene() to EncounterNote from QuickEncounter     
-                1.0.4l: More data->document to remove deprecation warnings  
-                createFrom(): Link the Quick Encounter to the JournalEntryPage if available 
-2-Sep-2022      1.0.5a: Support new [Add] button from QE dialog to allow adding tokens/tiles (instead of using the external fist icon on the "open" QE)
-                runAddOrCreate(): Check first if we have a clickQE (the [Add] button in an existnig QE dialog)
-14-Sep-2022     1.0.5b: Fixed #107: createTokens() was updating createdTokens[i] to undefined if there were no changes
-                1.0.5c: Fixed #103: Can't Add captured tokens to existing QE: onRenderJournalPageSheet() now serializes the JE QE into JournalEntryPage0
-                if it's not already found; other JEPages are either empty or generated from embedded Actors.
-                1.0.5e: #98 Closing the JE should close all open QEs: closeJournalSheet Hook iterates through #sheets using getPageSheet()
-16-Sep-2022     1.0.5f: #106 Set an isMigratedToV10 flag at the Journal Entry level the first time we push a QE into the JournalEntryPage0,
-                and then ignore any JE-level QE with that flag set.
-                This should mean that when we remove the QE from JournalEntryPage0 it will NOT default back to the JE level
-                1.0.5g: #99  Suppress onRenderJournalPageSheet hook if JournalPageSHeet is being edited (isEditable is set)
-3-Oct-2022      1.0.6a: #109: Referenced JournalEntryPage in Foundry v9
-11-Oct-2022     1.1.0b: #108: Simplify Show QE behavior for Foundry V10 (Show button always visible; use Close to temporarily close a QE)
-                getJournalSheetHeaderButtons(): In FoundryV10 always add ShowQE button; Show button opens all QEs with displayed JournalEntryPages
-                displayQEDialog(): Honor showQEAutomatically setting but no per QE Hide ability
-19-Oct-2022     1.1.0c: #114: Was attempting to pop up a Journal Sheet for a Journal Entry Page  
-                1.1.0d: #94: Specific a default folder (defaultQEFolder) in Settings (which is looked up at QE creation time)              
-20-Oct-2022     1.1.0e: #116:QEs with embedded Compendium Entries don't run - strip off extraneous info in getActor()
-25-Oct-2022     1.1.1a: #117: Add Missing i18n tags
-31-Oct-2022     1.1.1b: #40: [Suggestion/Request] Work with roll tables - Partial: Extracts rolltables (although this will generate QEs for any rolltable in a JE)
-                1.1.1c: #40: Add yet another Setting to not look for Rolltables unless wanted
-2-Nov-2022      1.1.1d: #40: Add rollTables to qeData and QuickEncounter constructor      
-9-Nov-2022      1.1.1e: #40: Generate additional extracted Actors from the rollTables (which will then be generated into tokens)    
-15-Nov-2022     1.1.2c: #121: rollTables is not iterable (broke QE)   
-28-Mar-2023     1.1.3a: #125: Tokens spawning with 50% opacity (changed what is saved in generateFullExtractedActorTokenData())
-3-Apr-2023      1.1.3c: #105: Replace fist icon with crossed-swords to be consistent with Combat Tracker
-16-Apr-2023     1.1.4a: #115,#130: Partial fixes: findQuickEncounter() searches for JEPages with embedded QEs
-19-Apr-2023     1.1.4b: Fixed #115. improved #130: serializeIntoJournalEntry() was overriding newJournalEntry with present value
-20-Apr-2023     1.1.4c: Fixed #122: Running QE from Journal Entry Page note would still put it on the Journal Entry map note; 
-                run() Defer checking for journalEntryMapNote and then add findMapNoteForJE to check both JE and possibly parent (if it was a JEPage)
-21-Apr-2023     1.1.4d: Fixed #130: findQuickEncounter() now does a cascade of checks: open QE, open/displayed Journal Page Sheet, then Journal Entry Page currently displayed in the JE
-                Also changed to pass back JE rather than sheet, and QuickEncounter.link() changed accordingly
-29-May-2023     1.1.5b: Changed isFoundryV10Plus to isFoundryV10PlusPlus (to support checks for Foundry V11)                
-                1.1.5c: async run(): For Foundry v10+, switch back to canvas.tiles.activate()
-                1.1.5e: Fixed #135: generateFullExtractedActorTokenData() now rounds random coordinates (to avoid a Model Validation error)
-                1.1.5f: Fixed deprecation warning for mapNote.data
-3-Jul-2023      1.2.0a: Milestone 1.2
-8-Aug-2023      1.2.0b: Issue 123: Automatically add Player Tokens to Combat Tracker - add option    
-16-Aug-2023     1.2.0d: Removed "All" option because I don't know what it means (it would imply creating tokens for all players who weren't already in the scene) 
-3-Oct-2023      1.2.1c: Fixed #139: Changed code for "Add Player Tokens option Logged In" - thanks "DrMcCoy"; filter for those tokens with Actor === user.character (their assigned primary character)
-21-May2024      1.2.3b: Changed `r.evaluate({aync:false})` to `r.evaluateSync()`(probably will not work however because apparently sync can only be used for deterministic rolls
-                1.2.3c: Changed r.evaluate() to async calls because of Roll() changes
-                1.2.3d: Added isFoundryV12Plus
-28-May-2024     1.2.3f: createFrom: Check for journalEntryPage0 not defined and create 
-                1.2.3g: Add text.content to journalEntryPage0 creation ( description of added QE)     
-17-Jun-2024     12.1.0c: createCombat(): For Foundry v12 just use TokenDocument.implementation#createCombatants()
-                12.1.0d: Replace cls.create() with getDocumentClass("cls").create
-19-Jun-2024     12.1.1a: Issue #146:  showTutorialJournalEntry: In Foundry v12 create a Journal Entry Page for the tutorial
-*/
-
-
 import {EncounterNote} from './EncounterNote.js';
 import {QESheet} from './QESheet.js';
+import {MODULE_ID, JSON_FLAG} from './constants.js';
+import { AddToEncounter, LinkToEncounter } from './dialogs.js';
 
 export const QE = {
     MODULE_NAME : "quick-encounters",
@@ -276,10 +10,6 @@ export const QE = {
     QE_JSON_FLAG_KEY : "quickEncounter",
     ACTOR : "Actor"
 }
-
-
-//Matches "ndx+/-m" with/without spaces at the beginning of the string
-export const dieRollReg = /^([0-9]+\s*d[4,6,8,10,12](?:\s*[+,-]\s*[0-9]+)*)/;
 
 export class QuickEncounter {
     constructor(qeData={}) {
@@ -355,15 +85,12 @@ export class QuickEncounter {
         //1.0.4e: Check for null journalEntry because we're removing the extractQuickEncounterFromJE
         if (!journalEntry) {return null;}
         let quickEncounter = new QuickEncounter();  //makes sure it has functions etc.
-        let qeJSON = journalEntry?.getFlag(QE.MODULE_NAME, QE.QE_JSON_FLAG_KEY);
+        let qeJSON = journalEntry?.getFlag(MODULE_ID, JSON_FLAG);
         if (qeJSON) try {
             const quickEncounterFromData = JSON.parse(qeJSON);
             //1.2.3d: Replace v12 mergeObject with foundry.utils version
-            if (QuickEncounter.isFoundryV12Plus) {
-                quickEncounter = foundry.utils.mergeObject(quickEncounter, quickEncounterFromData); 
-            } else {
-                quickEncounter = mergeObject(quickEncounter, quickEncounterFromData);
-            }
+            quickEncounter = foundry.utils.mergeObject(quickEncounter, quickEncounterFromData); 
+            
             //v0.6.1: Backwards compatibility - set the isSavedToken flag
             quickEncounter.extractedActors?.forEach(eActor => {
                 eActor.savedTokensData?.forEach(td => {td.isSavedToken = true;});
@@ -414,127 +141,14 @@ export class QuickEncounter {
 
 
     static init() {
-        game.settings.register(QE.MODULE_NAME, "quickEncountersVersion", {
-            name: "Quick Encounters Version",
-            hint: "",
-            scope: "system",
-            config: false,
-            default: QE.MODULE_VERSION,
-            type: String
-        });
-        game.settings.register(QE.MODULE_NAME, "freezeCapturedTokens", {
-            name: "QE.FreezeCapturedTokens.NAME",
-            hint: "QE.FreezeCapturedTokens.HINT",
-            scope: "world",
-            config: true,
-            default: true,
-            type: Boolean
-        });
-        game.settings.register(QE.MODULE_NAME, "showQEAutomatically", {
-            name: "QE.Setting.ShowQEAutomatically.NAME",
-            hint: "QE.Setting.ShowQEAutomatically.HINT",
-            scope: "world",
-            config: true,
-            default: true,
-            type: Boolean
-        });
-        game.settings.register(QE.MODULE_NAME, "defaultQEFolder", {
-            name: "QE.Setting.DefaultQEFolder.NAME",
-            hint: "QE.Setting.DefaultQEFolder.HINT",
-            scope: "world",
-            config: true,
-            default: null,
-            type: String
-        });
-       game.settings.register(QE.MODULE_NAME, "displayXPAfterCombat", {
-            name: "QE.DisplayXPAfterCombat.NAME",
-            hint: "QE.DisplayXPAfterCombat.HINT",
-            scope: "world",
-            config: true,
-            visible: game.system.id === "dnd5e",
-            default: true,
-            type: Boolean
-        });
-        //v0.9.0 Delete tokens by default after the Add/Link
-        game.settings.register(QE.MODULE_NAME, "deleteTokensAfterAdd", {
-            name: "QE.Setting.DeleteTokensAfterAdd.NAME",
-            hint: "QE.Setting.DeleteTokensAfterAdd.HINT",
-            scope: "world",
-            config: true,
-            default: true,
-            type: Boolean
-        });
-        //v0.9.0 Show Delete Hostile Tokens Dialog after Combat
-        game.settings.register(QE.MODULE_NAME, "showDeleteTokensDialogAfterCombat", {
-            name: "QE.Setting.ShowDeleteTokensDialogAfterCombat.NAME",
-            hint: "QE.Setting.ShowDeleteTokensDialogAfterCombat.HINT",
-            scope: "world",
-            config: true,
-            default: true,
-            type: Boolean
-        });
-        //v0.9.3 Show Add to Combat Tracker checkboxes in QE dialog
-        game.settings.register(QE.MODULE_NAME, "showAddToCombatTrackerCheckbox", {
-            name: "QE.Setting.ShowAddToCombatTrackerCheckbox.NAME",
-            hint: "QE.Setting.ShowAddToCombatTrackerCheckbox.HINT",
-            scope: "world",
-            config: true,
-            default: false,
-            type: Boolean
-        });
-        //v1.0. Check for Instant Encounters when you drag a JE to the Scene to create a Note
-        game.settings.register(QE.MODULE_NAME, "checkForInstantEncounter", {
-            name: "QE.Setting.CheckInstantEncounter.NAME",
-            hint: "QE.Setting.CheckInstantEncounter.HINT",
-            scope: "world",
-            config: true,
-            default: false,
-            type: Boolean
-        });
-        //v1.1.1 Extract Actor RollTables into QEs
-        game.settings.register(QE.MODULE_NAME, "extractActorRollTables", {
-            name: "QE.Setting.ExtractActorRollTables.NAME",
-            hint: "QE.Setting.ExtractActorRollTables.HINT",
-            scope: "world",
-            config: true,
-            default: false,
-            type: Boolean
-        });
-        //v1.2.0 Automatically add player tokens to Combat Tracker
-        game.settings.register(QE.MODULE_NAME, "addPlayerTokensToCT", {
-            name: "QE.Setting.AddPlayerTokensToCombatTracker.NAME",
-            hint: "QE.Setting.AddPlayerTokensToCombatTracker.HINT",
-            scope: "world",
-            config: true,
-            type: String,
-            choices: {
-                "no":"QE.Setting.AddPlayerTokensToCombatTracker.OPTION.No",
-                "inScene" : "QE.Setting.AddPlayerTokensToCombatTracker.OPTION.InScene", 
-                "loggedIn": "QE.Setting.AddPlayerTokensToCombatTracker.OPTION.LoggedIn"
-            },
-            default: "no"
-        });
-
         //0.6.13 Initialize which Note you are hovering over
         QuickEncounter.hoveredNote = null;
-
-        //0.9.5 Set the QuickEncounter.isFoundryV8Plus variable for different code-paths
-        //If v9, then game.data.version will throw a deprecation warning so test for v9 first
-        QuickEncounter.isFoundryV8Plus = (game.data.release?.generation >= 9) || (game.data.version?.startsWith("0.8"));
-        //1.0.3a: For Foundry v10 and 1.1.5b for Foundry 
-        QuickEncounter.isFoundryV10Plus = (game.data.release?.generation >= 10);
-        //1.2.3d: For Foundry v12
-        QuickEncounter.isFoundryV12Plus = (game.data.release?.generation >= 12);
     }
 
     static runAddOrCreate(event, clickedQuickEncounter) {
         //Will only have a clickedQuickEncounter when called from the QE dialog with the [Add tokens/tiles] button
-        let FRIENDLY_TOKEN_DISPOSITIONS;
-        if (QuickEncounter.isFoundryV8Plus) {
-            FRIENDLY_TOKEN_DISPOSITIONS = CONST.TOKEN_DISPOSITIONS.FRIENDLY;
-        } else {//0.7.x
-            FRIENDLY_TOKEN_DISPOSITIONS = TOKEN_DISPOSITIONS.FRIENDLY;
-        }
+        let FRIENDLY_TOKEN_DISPOSITIONS = CONST.TOKEN_DISPOSITIONS.FRIENDLY;
+
         //Called when you press the Quick Encounters button (crossed-swords) from the sidebar
         //If you are controlling tokens it creates a new Quick Encounter Journal Entry
         //0.6.4: If there's an open Journal Entry it asks if you want to add the tokens to it or run it
@@ -545,26 +159,14 @@ export class QuickEncounter {
         let controlledNonFriendlyTokens;
         let controlledFriendlyTokens;
         //1.0.4l: .data is deprecated in v10
-        if (QuickEncounter.isFoundryV10Plus) {
-            controlledNonFriendlyTokens = controlledTokens?.filter(t => t.document.disposition !== FRIENDLY_TOKEN_DISPOSITIONS );
-            controlledFriendlyTokens = controlledTokens?.filter(t => t.document.disposition === FRIENDLY_TOKEN_DISPOSITIONS );
-        } else {
-            controlledNonFriendlyTokens = controlledTokens?.filter(t => t.data?.disposition !== FRIENDLY_TOKEN_DISPOSITIONS );
-            controlledFriendlyTokens = controlledTokens?.filter(t => t.data?.disposition === FRIENDLY_TOKEN_DISPOSITIONS );
-        }
+        controlledNonFriendlyTokens = controlledTokens?.filter(t => t.document.disposition !== FRIENDLY_TOKEN_DISPOSITIONS );
+        controlledFriendlyTokens = controlledTokens?.filter(t => t.document.disposition === FRIENDLY_TOKEN_DISPOSITIONS );
 
         //Tiles
         //0.7.0b: Capture controlled tiles (will be one or the other of foreground or background, not both)
         //0.9.6b: Switch to using canvas.foreground and canvas.background because Tile.layer doesn't exist in Foundry 9
         //1.0.4l: Foundry v10 has controlled array like tokens
-        let controlledTiles;
-        if (QuickEncounter.isFoundryV10Plus) {
-            controlledTiles = Array.from(canvas.tiles?.controlled); 
-        } else {
-            controlledTiles = Array.from(canvas.foreground.controlled);
-            controlledTiles = controlledTiles.concat(Array.from(canvas.background.controlled));
-        }
-
+        let controlledTiles = Array.from(canvas.tiles?.controlled);
         let controlledAssets;
         //v0.6.1 If you have both controlledNonFriendly tokens AND an open Quick Encounter, ask if you want to add to it
         //0.7.0 Add tiles; can't have both simultaneously because you have to switch tools in the Control pallette to select tiles
@@ -595,28 +197,34 @@ export class QuickEncounter {
 
             //Existing Quick Encounter: Ask whether to run, add new assets, or create one from scratch
             if (openQuickEncounter) {
-                Dialog3.buttons3({
+                
+                new AddToEncounter(event, openQuickEncounter, controlledAssets).render(true);
+                
+                
+                /*Dialog3.buttons3({
                     title: game.i18n.localize("QE.AddToQuickEncounter.TITLE"),
                     content: game.i18n.localize("QE.AddToQuickEncounter.CONTENT"),
                     button1cb: () => {openQuickEncounter.run(event);},
                     button2cb: () => {openQuickEncounter.add(controlledAssets)},
                     button3cb: () => {QuickEncounter.createFrom(controlledAssets)},
                     buttonLabels : ["QE.AddToQuickEncounter.RUN",  "QE.AddToQuickEncounter.ADD",  "QE.AddToQuickEncounter.CREATE"]
-                });
+                });*/
             } else if (openJournalEntry) {
                 //Existing Journal Entry, ask if you want to create a Quick Encounter out of it
-                Dialog3.buttons3({
+                new LinkToEncounter(event, openQuickEncounter, controlledAssets).render(true);
+                
+                /*Dialog3.buttons3({
                     title: game.i18n.localize("QE.LinkToQuickEncounter.TITLE"),
                     content: game.i18n.localize("QE.LinkToQuickEncounter.CONTENT"),
                     button1cb: () => {QuickEncounter.link(openJournalEntry,controlledAssets)},
                     button2cb: () => {QuickEncounter.createFrom(controlledAssets)},
                     button3cb: null,
                     buttonLabels : ["QE.LinkToQuickEncounter.LINK",  "QE.AddToQuickEncounter.CREATE"]
-                });
+                });*/
             } else if (controlledFriendlyTokens?.length) {
                 //Check whether you meant to add friendly tokens
-                Dialog.confirm({
-                  title: game.i18n.localize("QE.IncludeFriendlies.TITLE"),
+                DialogV2.confirm({
+                  window: { title: game.i18n.localize("QE.IncludeFriendlies.TITLE") },
                   content: game.i18n.localize("QE.IncludeFriendlies.CONTENT"),
                   yes: () => {QuickEncounter.createFrom(controlledAssets)},
                   no: () => {
@@ -1831,27 +1439,6 @@ export class QuickEncounter {
         }
     }
 
-    /* Hook on renderJournalSheet */
-    static async onRenderJournalSheet(journalSheet, html) {
-        //1.0.4e: In Foundry v10 we hook on JournalPageSheet (and inherit the Journal setting if present)
-        if (!game.user.isGM || QuickEncounter.isFoundryV10Plus) {return;}
-
-        //v0.5.0 If this could be a Quick Encounter, add the button at the top and the total XP
-        //v0.5.3 Remove any existing versions of this first before recomputing it - limit to 5 checks just in case
-        for (let iCheck=0; iCheck < 5; iCheck++) {
-            const qeDiv = journalSheet.element.find("#QuickEncounterIntro");
-            if (!qeDiv || !qeDiv[0] || !qeDiv[0].parentNode) {break;}
-            qeDiv[0].parentNode.removeChild(qeDiv[0]);
-        }
-
-        const quickEncounter = QuickEncounter.extractQuickEncounter(journalSheet);
-
-        //Build and show the QE Dialog and add to the displayed Journal Entry
-        if (quickEncounter) {
-            quickEncounter.displayQEDialog(journalSheet, html);
-        }
-    }
-
     // Hook on renderJournalPageSheet for Foundry v10 multi-page Journals
     static async onRenderJournalPageSheet(journalPageSheet, html) {
         //Should never get into onRenderJournalPageSheet unless v10 but test anyway
@@ -1941,12 +1528,9 @@ export class QuickEncounter {
 
         //0.7.3 OPen the QE automatically (default) in general unless you have hidden it
         let showQEDialog;
-        if (QuickEncounter.isFoundryV10Plus) {
-            //1.1.0b: No per QE Hide ability in Foundry V10
-            showQEDialog = game.settings.get(QE.MODULE_NAME, "showQEAutomatically");
-        } else {
-            showQEDialog =  ((this.hideQE === null) && game.settings.get(QE.MODULE_NAME, "showQEAutomatically")) || !(this.hideQE ?? true);
-        }
+        //1.1.0b: No per QE Hide ability in Foundry V10
+        showQEDialog = game.settings.get(QE.MODULE_NAME, "showQEAutomatically");
+        
         if (showQEDialog || qeJournalEntry?.showQEOnce) {
             delete qeJournalEntry.showQEOnce;
             qeDialog.render(true);
@@ -2028,150 +1612,3 @@ export class Dialog3 extends Dialog {
         }
     }
 }
-
-
-/** HOOKS */
-//0.6.13: Can't hook on actually clicking on the Note, so on hoverIn/hoverOut we record which Note we're on
-//and then set qeJournalEntry.clickedNote in the renderJournalEntry Hook
-Hooks.on("hoverNote", (note, startedHover) => {
-    if (!note || !game.user.isGM) {return;}
-    if (startedHover) {
-        QuickEncounter.hoveredNote = note;
-    } else {
-        QuickEncounter.hoveredNote = null;
-    }
-});
-
-//pre-Foundry v10 (no multi-page Journal)
-//Add a listener for the embedded Encounter button and record the scene if we can
-Hooks.on(`renderJournalSheet`,  QuickEncounter.onRenderJournalSheet);
-
-//The Journal Sheet  looks to see if this is the Tutorial and deletes the Journal Entry if so
-//Placing a map Note is moved to when you actually run the Encounter
-Hooks.on('closeJournalSheet', async (journalSheet, html) => {
-    if (!game.user.isGM) {return;}
-    const journalEntry = journalSheet.object; 
-
-    //0.5.3: BUG: If you had the Tutorial JE open it would delete another Journal Entry when you closed it
-    //This was happening because $("QuickEncountersTutorial") by itself was searching the whole DOM
-    if (journalSheet.element.find("#QuickEncountersTutorial").length) {
-        //This is the tutorial Journal Entry
-        //v0.4.0 Check that we haven't already deleted this (because onDelete -> close)
-        if (game.journal.get(journalEntry.id)) {
-            //v0.8.3: Switch to use JournalEntry.deleteDocuments(ids)
-            if (QuickEncounter.isFoundryV8Plus) {
-                if (QuickEncounter.isFoundryV12Plus) {
-                    await getDocumentClass("JournalEntry").deleteDocuments([journalEntry.id])
-                } else {
-                    await JournalEntry.deleteDocuments([journalEntry.id]);
-                }
-            } else {//Foundry v0.7
-                await JournalEntry.delete(journalEntry.id);
-            }
-        }
-    }
-
-    //v0.6.1: If there's a QE dialog open, close that too
-    if (journalSheet.qeDialog) {
-        journalSheet.qeDialog.close();
-        delete journalSheet.qeDialog;
-    }
-
-    //v1.0.5e: Close open Journal Page Sheet QEs - for some reason the journalEntryPage.sheet is not updated so we have to use the getPageSheet() method
-    //v1.0.7a: Check for isFoundryV10Plus
-    if (QuickEncounter.isFoundryV10Plus) {
-        for (let journalEntryPageId of journalEntry.pages?.keys()) {
-            const journalPageSheet = journalSheet.getPageSheet(journalEntryPageId);
-            if (journalPageSheet?.qeDialog) {
-                journalPageSheet.qeDialog.close();
-                delete journalPageSheet.qeDialog;
-            }
-        }
-    }
-
-    delete journalEntry.clickedNote;
-});
-
-const addTool = (toolsContainer, tool) => {
-    try {
-      if (!toolsContainer || !tool?.name) return;
-      if (Array.isArray(toolsContainer)) toolsContainer.push(tool);
-      else if (typeof toolsContainer === 'object') toolsContainer[tool.name] = tool;
-    } catch (_) {}
-  };
-
-//1.0.4c: Foundry v10.277 - support for multipage Journal
-Hooks.on(`renderJournalPageSheet`, QuickEncounter.onRenderJournalPageSheet )
-//Don't have to worry about Tutorial (deal with that on close Journal Entry)
-Hooks.on('closeJournalPageSheet', async (journalPageSheet, html) => {
-    if (!game.user.isGM) {return;}
-    const journalEntryPage = journalPageSheet.object; 
-
-    //v0.6.1: If there's a QE dialog open, close that too
-    if (journalPageSheet.qeDialog) {
-        journalPageSheet.qeDialog.close();
-        delete journalPageSheet.qeDialog;
-    }
-    delete journalEntryPage.clickedNote;
-});
-
-
-Hooks.on("getJournalSheetHeaderButtons", QuickEncounter.getJournalSheetHeaderButtons);
-Hooks.on("init", QuickEncounter.init);
-//Hooks.on('getSceneControlButtons', QuickEncounter.getSceneControlButtons);
-Hooks.on("deleteCombat", (combat, options, userId) => {
-    QuickEncounter.onDeleteCombat(combat, options, userId);
-});
-
-
-// Add controls to Wall and Token tools for GM - consolidated into single hook
-Hooks.on('getSceneControlButtons', (controls) => {
-    if (!game.user.isGM) return;
-    try {
-        const groups = Array.isArray(controls) ? controls : Object.values(controls || {});
-
-        // === TOKEN TOOL ADDITIONS ===
-        const tokens = groups.find((c) => c?.name === 'tokens' || c?.name === 'token');
-        if (tokens) {
-            addTool(tokens.tools, {
-                name: 'linkEncounter',
-                title: game.i18n.localize("QE.CreateQuickEncounter.BUTTON"),
-                icon: 'fas fa-swords',
-                toggle: false,
-                button: true,
-                visible: game.user.isGM,
-                onChange: event => QuickEncounter.runAddOrCreate(event)
-            });
-        } else {
-            console.warn(
-                '[quick-encounter] Tokens tool not found. Control groups:',
-                groups.map((c) => c?.name),
-            );
-        }
-
-        const tiles = groups.find((c) => c?.name === 'tiles' || c?.name === 'tile');
-        if (tiles) {
-            addTool(tiles.tools, {
-                name: 'linkEncounter',
-                title: game.i18n.localize("QE.CreateQuickEncounter.BUTTON"),
-                icon: 'fas fa-swords',
-                toggle: false,
-                button: true,
-                visible: game.user.isGM,
-                onChange: event => QuickEncounter.runAddOrCreate(event)
-            });
-        } else {
-            console.warn(
-                '[quick-encounter] Tiles tool not found. Control groups:',
-                groups.map((c) => c?.name),
-            );
-        }
-    } catch (_) {
-      console.error('[quick-encounter] getSceneControlButtons error', _);
-    }
-  });
-
-//0.9.1a: (from ironmonk88) Add a QE (crossed swords) control to the command palette for Monk's Enhanced Journal
-Hooks.on("activateControls", (journal, controls) => {
-	controls.push({id: 'quickencounter', text: "Quick Encounter", icon: 'fa-swords', conditional: game.user.isGM, callback: QuickEncounter.runAddOrCreate.bind(journal?.subsheet)});
-});												 
