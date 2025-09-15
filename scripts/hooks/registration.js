@@ -1,4 +1,5 @@
 import { QuickEncounter } from '../QuickEncounter.js'
+import { registerUIHooks } from './ui.js'
 
 export function registerHooks() {
     /** HOOKS */
@@ -13,6 +14,8 @@ export function registerHooks() {
         }
     });
 
+    registerUIHooks();
+
     //The Journal Sheet  looks to see if this is the Tutorial and deletes the Journal Entry if so
     //Placing a map Note is moved to when you actually run the Encounter
     Hooks.on('closeJournalSheet', async (journalSheet, html) => {
@@ -26,15 +29,7 @@ export function registerHooks() {
             //v0.4.0 Check that we haven't already deleted this (because onDelete -> close)
             if (game.journal.get(journalEntry.id)) {
                 //v0.8.3: Switch to use JournalEntry.deleteDocuments(ids)
-                if (QuickEncounter.isFoundryV8Plus) {
-                    if (QuickEncounter.isFoundryV12Plus) {
                         await getDocumentClass("JournalEntry").deleteDocuments([journalEntry.id])
-                    } else {
-                        await JournalEntry.deleteDocuments([journalEntry.id]);
-                    }
-                } else {//Foundry v0.7
-                    await JournalEntry.delete(journalEntry.id);
-                }
             }
         }
 
@@ -46,7 +41,6 @@ export function registerHooks() {
 
         //v1.0.5e: Close open Journal Page Sheet QEs - for some reason the journalEntryPage.sheet is not updated so we have to use the getPageSheet() method
         //v1.0.7a: Check for isFoundryV10Plus
-        if (QuickEncounter.isFoundryV10Plus) {
             for (let journalEntryPageId of journalEntry.pages?.keys()) {
                 const journalPageSheet = journalSheet.getPageSheet(journalEntryPageId);
                 if (journalPageSheet?.qeDialog) {
@@ -54,7 +48,7 @@ export function registerHooks() {
                     delete journalPageSheet.qeDialog;
                 }
             }
-        }
+        
 
         delete journalEntry.clickedNote;
     });

@@ -43,21 +43,22 @@ Object.assign(CONFIG.JournalEntry.noteIcons, moreNoteIcons);
 
 
 
-export class EncounterNoteConfig extends NoteConfig {
+export class EncounterNoteConfig extends foundry.applications.sheets.NoteConfig {
     /** @override  */
     //WARNING: Do not add submitOnClose=true because that will create a submit loop
-    static get defaultOptions() {
+    /*static get defaultOptions() {
         let defaultOptions;
         const addedOptions = {
             id : "encounter-note-config",
             title : game.i18n.localize( "QE.Config.TITLE")
         }
-        if (QuickEncounter.isFoundryV12Plus) {
-            defaultOptions = foundry.utils.mergeObject(super.defaultOptions, addedOptions); 
-        } else {
-            defaultOptions = mergeObject(super.defaultOptions, addedOptions);
-        }
+        defaultOptions = foundry.utils.mergeObject(super.defaultOptions, addedOptions); 
         return defaultOptions;
+    }*/
+
+    static DEFAULT_OPTIONS = {
+        id : "encounter-note-config",
+        title : "QE.Config.TITLE"
     }
 }
 
@@ -90,7 +91,7 @@ export class EncounterNote {
         //v0.5.0: Switch to Note.create() to bypass the Note dialog
         //This is different from the JournalEntry._onDropData approach
         //0.9.3f: Remove deprecation warning by using createEmbeddedDocuments()
-        let newNote = QuickEncounter.isFoundryV8Plus ? await canvas.scene.createEmbeddedDocuments("Note",[noteData]) : await Note.create(noteData);
+        let newNote = await canvas.scene.createEmbeddedDocuments("Note",[noteData]);
         //1.0.2c: createEmbeddedDocuments returns an array, and we just want a single element
         if (Array.isArray(newNote)) {newNote = newNote[0];}
         newNote._sheet = new EncounterNoteConfig(newNote);
@@ -105,13 +106,7 @@ export class EncounterNote {
         let matchingNoteIds;
         let numNotesDeleted = 0;
         for (const scene of game.scenes) {
-            if (QuickEncounter.isFoundryV10Plus) {
-                matchingNoteIds = Array.from(scene.notes?.values()).filter(nd => nd.entryId === journalEntry.id).map(note => note.id);
-            } else if (QuickEncounter.isFoundryV8Plus) {
-                matchingNoteIds = Array.from(scene.data.notes.values()).filter(nd => nd.data.entryId === journalEntry.id).map(note => note.id);
-            } else {
-                matchingNoteIds = scene.data.notes.filter(nd => nd.entryId === journalEntry.id).map(note => note._id);
-            }
+            matchingNoteIds = Array.from(scene.notes?.values()).filter(nd => nd.entryId === journalEntry.id).map(note => note.id);
             if (!matchingNoteIds?.length) {continue;}
             //Deletion is triggered by Scene (because that's where the notes are stored)
             //v0.8.3a: If Foundry v0.8.x then don't delete the Note in the viewed Scene because the Journal._onDelete() trigger does that
@@ -176,7 +171,7 @@ export class EncounterNote {
         } else {return;}
         // Validate the final position is in-bounds
         //1.0.4l: Use canvas.stage.hitArea in v10
-        const hitArea = QuickEncounter.isFoundryV10Plus ? canvas.stage.hitArea : canvas.grid.hitArea;
+        const hitArea =  canvas.stage.hitArea;
         if (hitArea.contains(noteAnchor.x, noteAnchor.y)) {
             // Create a Note; we don't pop-up the Note sheet because we really want this Note to be placed
             //(they can always edit it afterwards)
@@ -189,26 +184,14 @@ export class EncounterNote {
         if (!journalEntry) {return null;}
         //1.0.4k: Use parent (which is what is saved to the map) if this is JournalEntryPage
         //1.0.7a: Check for FoundryV10
-        const parentJournalEntry = (QuickEncounter.isFoundryV10Plus && (journalEntry instanceof JournalEntryPage)) ? journalEntry.parent : journalEntry;
+        const parentJournalEntry = (journalEntry instanceof JournalEntryPage) ? journalEntry.parent : journalEntry;
         //if sceneNote is available, then we're in the Note Scene already
         if (parentJournalEntry.sceneNote) {return game.scenes.viewed;}
         else {          
             //Now we need to search through the available scenes to find a note with this Journal Entry
             for (const scene of game.scenes) {
-                let notes;
-                if (QuickEncounter.isFoundryV10Plus) {
-                    notes = scene.notes;
-                } else {
-                    notes = scene.data.notes;
-                }
-                let foundNote;
-                if (QuickEncounter.isFoundryV10Plus) {
-                    foundNote = Array.from(notes.values()).find(nd => nd.entryId === parentJournalEntry.id);
-                } else if (QuickEncounter.isFoundryV8Plus) {
-                    foundNote = Array.from(notes.values()).find(nd => nd.data.entryId === parentJournalEntry.id);
-                } else {
-                    foundNote = notes.find(note => note.entryId === parentJournalEntry.id);
-                }
+                let notes = scene.notes;
+                let foundNote = Array.from(notes.values()).find(nd => nd.entryId === parentJournalEntry.id);
                 if (foundNote) {
                     return scene;
                 }
@@ -261,7 +244,7 @@ export class EncounterNote {
         if (!qeScene || !journalEntry) {return false;}
         //1.0.4k: Use parent (which is what is saved to the map) if this is JournalEntryPage
         //1.0.7a: Check for FoundryV10
-        const parentJournalEntry = (QuickEncounter.isFoundryV10Plus && (journalEntry instanceof JournalEntryPage)) ? journalEntry.parent : journalEntry;
+        const parentJournalEntry = (journalEntry instanceof JournalEntryPage) ? journalEntry.parent : journalEntry;
         //If we're viewing the relevant scene and the map note was placed, then good
         if (parentJournalEntry.sceneNote) {return true;}
 
@@ -325,8 +308,7 @@ export class EncounterNote {
             }
 
             quickEncounter = QuickEncounter.extractQuickEncounterFromJEOrEmbedded(journalEntryOrJEPage);
-            //Pre-v10 QEs are dynamically moved onto JournalEntryPage0 so check for that
-            if (!quickEncounter && QuickEncounter.isFoundryV10Plus) {
+            if (!quickEncounter) {
                 //1.0.4m We have to check at least the first JournalEntryPage (we know that we have dropped a Journal Entry)
                 const journalEntryPage0 = journalEntryOrJEPage.pages?.values().next().value;
                 quickEncounter = QuickEncounter.extractQuickEncounterFromJEOrEmbedded(journalEntryPage0);
@@ -377,13 +359,7 @@ Hooks.on(`dropCanvasData`, (canvas, data) => {
     //1.1.5 check for either JournalEntry OR JournalEntryPage
     if ((data?.type === "JournalEntry") || (data?.type === "JournalEntryPage")) {
         let cls;
-        if (QuickEncounter.isFoundryV12Plus) {
             cls = getDocumentClass(data?.type);
-        } else if (data?.type === "JournalEntry") {
-            cls = JournalEntry;
-        } else if (data?.type === "JournalEntryPage") {
-            cls = JournalEntryPage;
-        }
         cls.fromDropData(data).then(j => {
             EncounterNote.checkForQEAndCreateNote(j, data);
         });
