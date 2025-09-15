@@ -527,42 +527,6 @@ export class QuickEncounter {
         QuickEncounter.isFoundryV12Plus = (game.data.release?.generation >= 12);
     }
 
-
-    static getSceneControlButtons(buttons) {
-        if (!game.user.isGM) {return;}
-        //Hooked on the left-hand set of buttons; add a Create Quick Encounter one
-        const basicControlsButton = buttons.find(b => b.name === "token");
-
-        if (basicControlsButton) {
-            basicControlsButton.tools.push({
-                name: "linkEncounter",
-                title: game.i18n.localize("QE.CreateQuickEncounter.BUTTON"),
-                icon: "fas fa-swords",
-                toggle: false,
-                button: true,
-                visible: game.user.isGM,
-                onClick: event => QuickEncounter.runAddOrCreate(event)
-            });          
-        }
-
-        const tileControlsButton = buttons.find(b => b.name === "tiles");
-
-        if (tileControlsButton) {
-            tileControlsButton.tools.push({
-                name: "linkEncounter",
-                title: game.i18n.localize("QE.CreateQuickEncounter.BUTTON"),
-                //1.1.3c Issue 105: Replace raised-fist with crossed-swords to be consistent with CT
-                icon: "fas fa-swords",
-                toggle: false,
-                button: true,
-                visible: game.user.isGM,
-                onClick: event => QuickEncounter.runAddOrCreate(event)
-            });
-        }
-
-
-    }
-
     static runAddOrCreate(event, clickedQuickEncounter) {
         //Will only have a clickedQuickEncounter when called from the QE dialog with the [Add tokens/tiles] button
         let FRIENDLY_TOKEN_DISPOSITIONS;
@@ -2128,6 +2092,13 @@ Hooks.on('closeJournalSheet', async (journalSheet, html) => {
     delete journalEntry.clickedNote;
 });
 
+const addTool = (toolsContainer, tool) => {
+    try {
+      if (!toolsContainer || !tool?.name) return;
+      if (Array.isArray(toolsContainer)) toolsContainer.push(tool);
+      else if (typeof toolsContainer === 'object') toolsContainer[tool.name] = tool;
+    } catch (_) {}
+  };
 
 //1.0.4c: Foundry v10.277 - support for multipage Journal
 Hooks.on(`renderJournalPageSheet`, QuickEncounter.onRenderJournalPageSheet )
@@ -2147,10 +2118,58 @@ Hooks.on('closeJournalPageSheet', async (journalPageSheet, html) => {
 
 Hooks.on("getJournalSheetHeaderButtons", QuickEncounter.getJournalSheetHeaderButtons);
 Hooks.on("init", QuickEncounter.init);
-Hooks.on('getSceneControlButtons', QuickEncounter.getSceneControlButtons);
+//Hooks.on('getSceneControlButtons', QuickEncounter.getSceneControlButtons);
 Hooks.on("deleteCombat", (combat, options, userId) => {
     QuickEncounter.onDeleteCombat(combat, options, userId);
 });
+
+
+// Add controls to Wall and Token tools for GM - consolidated into single hook
+Hooks.on('getSceneControlButtons', (controls) => {
+    if (!game.user.isGM) return;
+    try {
+        const groups = Array.isArray(controls) ? controls : Object.values(controls || {});
+
+        // === TOKEN TOOL ADDITIONS ===
+        const tokens = groups.find((c) => c?.name === 'tokens' || c?.name === 'token');
+        if (tokens) {
+            addTool(tokens.tools, {
+                name: 'linkEncounter',
+                title: game.i18n.localize("QE.CreateQuickEncounter.BUTTON"),
+                icon: 'fas fa-swords',
+                toggle: false,
+                button: true,
+                visible: game.user.isGM,
+                onChange: event => QuickEncounter.runAddOrCreate(event)
+            });
+        } else {
+            console.warn(
+                '[quick-encounter] Tokens tool not found. Control groups:',
+                groups.map((c) => c?.name),
+            );
+        }
+
+        const tiles = groups.find((c) => c?.name === 'tiles' || c?.name === 'tile');
+        if (tiles) {
+            addTool(tiles.tools, {
+                name: 'linkEncounter',
+                title: game.i18n.localize("QE.CreateQuickEncounter.BUTTON"),
+                icon: 'fas fa-swords',
+                toggle: false,
+                button: true,
+                visible: game.user.isGM,
+                onChange: event => QuickEncounter.runAddOrCreate(event)
+            });
+        } else {
+            console.warn(
+                '[quick-encounter] Tiles tool not found. Control groups:',
+                groups.map((c) => c?.name),
+            );
+        }
+    } catch (_) {
+      console.error('[quick-encounter] getSceneControlButtons error', _);
+    }
+  });
 
 //0.9.1a: (from ironmonk88) Add a QE (crossed swords) control to the command palette for Monk's Enhanced Journal
 Hooks.on("activateControls", (journal, controls) => {
