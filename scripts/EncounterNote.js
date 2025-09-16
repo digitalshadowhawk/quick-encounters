@@ -1,4 +1,4 @@
-import {QuickEncounter, QE, Dialog3} from './QuickEncounter.js';
+import {QuickEncounter, Dialog3} from './QuickEncounter.js';
 
 //Expand the available list of Note icons
 const moreNoteIcons = {

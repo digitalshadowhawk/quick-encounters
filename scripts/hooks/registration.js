@@ -69,7 +69,7 @@ export function registerHooks() {
         delete journalEntryPage.clickedNote;
     });
 
-
+//getHeaderControlsJournalEntrySheet
     Hooks.on("getJournalSheetHeaderButtons", QuickEncounter.getJournalSheetHeaderButtons);
     Hooks.on("init", QuickEncounter.init);
     //Hooks.on('getSceneControlButtons', QuickEncounter.getSceneControlButtons);

@@ -9,10 +9,10 @@
         <div class="flexcol">
             {{#each combatants}}
                 <div class="flexrow">
-                    <div class="actor-container">
+                    <div data-action="qeActorContainer">
                         <img class="actor-portrait" src="{{this.img}}" title="{{localize 'QE.QuickEncounterDialog.Remove' name=this.actorName}}" id="{{this.rowNum}}" />
                         <div class="actor-subtract">
-                            <i class="fas fa-minus" title="{{localize 'QE.QuickEncounterDialog.Remove' name=this.actorName}}" id="{{this.rowNum}}"></i>
+                            <i data-action="qeRemoveActor" class="fas fa-minus" title="{{localize 'QE.QuickEncounterDialog.Remove' name=this.actorName}}" id="{{this.rowNum}}"></i>
                         </div>                            
                     </div>
                     <div class="flexcol">
@@ -40,10 +40,10 @@
             {{/each}}
             {{#each tilesData}}
                 <div class="flexrow">
-                    <div class="tile-container">
+                    <div data-action="qeTileContainer">
                         <img class='actor-portrait' title="{{localize 'QE.QuickEncounterDialog.Remove'  name=''}}" src="{{this.texture.src}}" id="{{@index}}"/>
                         <div class="actor-subtract">
-                            <i class="fas fa-minus" title="{{localize 'QE.QuickEncounterDialog.Remove' name=''}}" id="{{@index}}"></i>
+                            <i data-action="qeRemoveTile" class="fas fa-minus" title="{{localize 'QE.QuickEncounterDialog.Remove' name=''}}" id="{{@index}}"></i>
                         </div>
                     </div>
                     <div class="flexrow">
@@ -53,11 +53,11 @@
             {{/each}}
             {{#each rollTables}}
             <div class="flexrow">
-                <div class="rolltable-container">
+                <div data-action="qeRolltableContainer">
                     <img class='actor-portrait' title="{{localize 'QE.QuickEncounterDialog.Remove'  name=this.name}}" src="modules\\quick-encounters\\img\\icons8-grid-3-80.png\"
                         id="{{@index}}" />
                     <div class="actor-subtract">
-                        <i class="fas fa-minus" title="{{localize 'QE.QuickEncounterDialog.Remove' name=this.name}}" id="{{@index}}"></i>
+                        <i data-action="qeRemoveRolltable" class="fas fa-minus" title="{{localize 'QE.QuickEncounterDialog.Remove' name=this.name}}" id="{{@index}}"></i>
                     </div>
                 </div>
                 <div class="flexrow vertical-centered">
@@ -69,10 +69,10 @@
         {{{totalXPLine}}}<br>
         {{#unless isFromCompendium}}
             <div class="flexrow">
-                <button type="button" name="addToCombatTracker"><i class="fas fa-swords"></i>
+                <button data-action="addToCombatTracker" type="button" name="addToCombatTracker"><i class="fas fa-swords"></i>
                     {{localize 'QE.QuickEncounterDialog.Run.BUTTON'}}
                 </button>
-                <button type="button" name="addTokensTiles"><i class="fas fa-user-plus"></i>
+                <button data-action="addTokensTiles" type="button" name="addTokensTiles"><i class="fas fa-user-plus"></i>
                     {{localize 'QE.QuickEncounterDialog.Add.BUTTON'}}
                 </button>
                 <button type="submit" name="save">

@@ -1,15 +1,7 @@
 import { EncounterNote } from './EncounterNote.js';
 import { QESheet } from './QESheet.js';
-import { MODULE_ID, MODULE_VERSION, JSON_FLAG, dieRollReg } from './constants.js';
+import { MODULE_ID, MODULE_VERSION, JSON_FLAG, TOKENS_FLAG, ACTOR, dieRollReg } from './constants.js';
 import { AddToEncounter, LinkToEncounter } from './dialogs.js';
-
-export const QE = {
-    MODULE_NAME: "quick-encounters",
-    MODULE_VERSION: "12.1.1",
-    TOKENS_FLAG_KEY: "tokens",
-    QE_JSON_FLAG_KEY: "quickEncounter",
-    ACTOR: "Actor"
-}
 
 export class QuickEncounter {
     constructor(qeData = {}) {
@@ -60,6 +52,8 @@ export class QuickEncounter {
     }
 
     async serializeIntoJournalEntry(newJournalEntry = null) {
+        console.log("serializing into journal entry");
+        
         /*Handles three possibilities as a form of polymorphism:
         1. newJournalEntry is non-null => update this.journalEntry and the other variables
         2. newJournalEntry is null, but the qe.journalEntry is non-null - update the existing JE
@@ -82,6 +76,7 @@ export class QuickEncounter {
     }
 
     static deserializeFromJournalEntry(journalEntry) {
+        console.log("Attempting to deserialize from journal entry");
         //1.0.4e: Check for null journalEntry because we're removing the extractQuickEncounterFromJE
         if (!journalEntry) { return null; }
         let quickEncounter = new QuickEncounter();  //makes sure it has functions etc.
@@ -430,7 +425,7 @@ export class QuickEncounter {
         // - but as an option (setting) you can leave the tokens on the map and they will be used instead of being generated
         // (You can still selectively delete them)
         const controlledTokensIds = controlledTokens.map(ct => { return ct.id });
-            const deleteTokensAfterAdd = game.settings.get(QE.MODULE_NAME, "deleteTokensAfterAdd");
+            const deleteTokensAfterAdd = game.settings.get(MODULE_ID, "deleteTokensAfterAdd");
             if (deleteTokensAfterAdd) {
                 canvas.scene.deleteEmbeddedDocuments("Token", controlledTokensIds);
             }
@@ -566,6 +561,7 @@ export class QuickEncounter {
 
     static extractQuickEncounter(journalSheet, htmlElements) {
         const journalEntry = journalSheet?.object;
+        console.log(journalEntry);
         return QuickEncounter.extractQuickEncounterFromJEOrEmbedded(journalEntry, htmlElements);
     }
 
@@ -575,6 +571,7 @@ export class QuickEncounter {
 
         let quickEncounter = QuickEncounter.deserializeFromJournalEntry(journalEntry);
         if (!quickEncounter) {
+            console.log("serialize from journal entry failed, extract from embedded next");
             quickEncounter = QuickEncounter.extractQuickEncounterFromEmbedded(journalEntry, htmlElements);
         }
         return quickEncounter;
@@ -583,15 +580,14 @@ export class QuickEncounter {
     static extractQuickEncounterFromEmbedded(journalEntry, htmlElements) {
         if (!journalEntry) { return null; }
         let quickEncounter;
-
+        console.log(journalEntry);
         //Extract it the old (v0.5) way - this also still applies if you create a Journal Entry with Actor or Compendium links
         //0.6 this now potentially includes Compendium links
         //1.0.4c: If journalEntry is actually a JournalEntryPage, then content is stored differently
         const computedHtmlElements = htmlElements ?? journalEntry.sheet.element;
-
         //v1.1.1b Extract RollTables as well (note these are not yet stored in the QuickEncounter, so if you modify the QE at all they will not be retained )
         const { extractedActors, extractedRollTables } = QuickEncounter.extractFromEmbedded(computedHtmlElements);
-        const savedTokensData = journalEntry.getFlag(QE.MODULE_NAME, QE.TOKENS_FLAG_KEY);
+        const savedTokensData = journalEntry.getFlag(MODULE_ID, TOKENS_FLAG);
         //v0.6.1: Backwards compatibility - set the isSavedToken flag
         savedTokensData?.forEach(td => { td.isSavedToken = true; });
 
@@ -608,6 +604,8 @@ export class QuickEncounter {
             }
             quickEncounter = new QuickEncounter(qeData);
         }
+
+        console.log(quickEncounter);
         return quickEncounter;
     }
 
@@ -616,7 +614,7 @@ export class QuickEncounter {
         //1.1.1c Extract Rolltable; we would still need to filter in only those that referenced Actors
         const ROLLTABLE = "RollTable";
         const ROLLTABLE_PERIOD = "RollTable.";
-        const extractActorRollTables = game.settings.get(QE.MODULE_NAME, "extractActorRollTables");
+        const extractActorRollTables = game.settings.get(MODULE_ID, "extractActorRollTables");
 
         //1.0.3a: Foundry v10 has changed the class (to content-link) and attributes used
         let searchTerms = {
@@ -666,7 +664,7 @@ export class QuickEncounter {
             //Get the dataPack entity type (has to be Actor)
             const dataPack = game.packs.get(dataPackName);
 
-            if ((dataEntity === QE.ACTOR) || (dataPack && (dataPack.documentName === QE.ACTOR))) {
+            if ((dataEntity === ACTOR) || (dataPack && (dataPack.documentName === ACTOR))) {
                 //1.0.4d: FOr Foundry v10 the new UUID format is "Actor.xxxx" but we are still doing just actor lookup later (including for backward compatibility)
                 dataID = dataID.replace(ACTOR_PERIOD, ""); //remove Actor.
 
@@ -772,7 +770,7 @@ export class QuickEncounter {
                 if (rollTableObject) {
                     const { roll, results } = await rollTableObject.draw({ displayChat: false });
                     for (const tableResult of results) {
-                        if (tableResult?.documentCollection === QE.ACTOR) {
+                        if (tableResult?.documentCollection === ACTOR) {
                             extractedActors.push({
                                 numActors: rollTable.numActors,
                                 dataPackName: null,        //only non-null if this were a compendium reference
@@ -1009,7 +1007,7 @@ export class QuickEncounter {
         */
 
         let allCombinedTokensData = [];
-        const showAddToCombatTrackerCheckbox = game.settings.get(QE.MODULE_NAME, "showAddToCombatTrackerCheckbox");
+        const showAddToCombatTrackerCheckbox = game.settings.get(MODULE_ID, "showAddToCombatTrackerCheckbox");
         for (const ea of this.extractedActors) {
             //0.9.3: FIX: Better way would be to keep the ExtractedActor structure all the way through to token creation and add to CT
             //but that would require a lot of changes
@@ -1073,7 +1071,7 @@ export class QuickEncounter {
         //v0.6.1d: If it's a savedToken (one that was "captured" then check if it should be frozen as is or regenerated for example by Token Mold)
         //Actor-generated tokens are always generated
         //v0.5.3d: Check the value of setting "freezeCapturedTokens"
-        const freezeCapturedTokens = game.settings.get(QE.MODULE_NAME, "freezeCapturedTokens");
+        const freezeCapturedTokens = game.settings.get(MODULE_ID, "freezeCapturedTokens");
         for (let i = 0; i < toCreateCombinedTokensData.length; i++) {
             //v0.5.0: Now reset the token data in case it was adjusted (e.g. by Token Mold), just for those that are frozen
             //v0.6.1d: If freezeCapturedTokens = true, then reset the savedTokens
@@ -1095,7 +1093,7 @@ export class QuickEncounter {
         encounterTokens = encounterTokens.concat(existingTokens);
 
         //1.2.0d: See if we are meant to add Player tokens; doing in createTokens() here because of the (future) possibility we might create player tokens
-        const addPlayerTokensToCT = game.settings.get(QE.MODULE_NAME, "addPlayerTokensToCT");
+        const addPlayerTokensToCT = game.settings.get(MODULE_ID, "addPlayerTokensToCT");
         if (["inScene", "loggedIn"].includes(addPlayerTokensToCT)) {
             //Get scene tokens (documents) that are associated with players
             let playerTokens = canvas.tokens.placeables.filter(t => t.actor?.hasPlayerOwner === true).map(t => {
@@ -1179,11 +1177,11 @@ export class QuickEncounter {
         //If the "Display XP" option is set, work out how many defeated foes and how many Player tokens
         //v0.9.0: Moved to displayXP
         //Only works with 5e - the setting is only displayed if that's true
-        const shouldDisplayXPAfterCombat = game.settings.get(QE.MODULE_NAME, "displayXPAfterCombat");
+        const shouldDisplayXPAfterCombat = game.settings.get(MODULE_ID, "displayXPAfterCombat");
         if (shouldDisplayXPAfterCombat) { await QuickEncounter.displayXP(hostileNPCCombatants, pcTokens); }
 
         //If the "Delete Tokens after Combat" option is set, ask with a two option dialog
-        const showDeleteTokensDialogAfterCombat = game.settings.get(QE.MODULE_NAME, "showDeleteTokensDialogAfterCombat");
+        const showDeleteTokensDialogAfterCombat = game.settings.get(MODULE_ID, "showDeleteTokensDialogAfterCombat");
         if (showDeleteTokensDialogAfterCombat) { await QuickEncounter.deleteTokensAfterCombatDialog(hostileNPCCombatants, defeatedHostileNPCCombatants); }
 
     }
@@ -1283,10 +1281,14 @@ export class QuickEncounter {
     static async getJournalSheetHeaderButtons(journalSheet, buttons) {
         //0.7.3: Add a Show QE button if this JE has a Quick Encounter and showQEAutomatically is false OR the QE has been hidden
         const quickEncounter = QuickEncounter.extractQuickEncounter(journalSheet);
+        console.log("hook works");
+        console.log(!game.settings.get(MODULE_ID, "showQEAutomatically"));
+        console.log(quickEncounter?.hideQE);
         //1.1.0b: Issue #108 (https://github.com/spetzel2020/quick-encounters/issues/108) - hack solution to always show the Show button in Foundry 10
         const displayShowQEButton = !game.settings.get(MODULE_ID, "showQEAutomatically") || quickEncounter?.hideQE;
         //If this is an inferred QE (from the presence of Actors), quickEncounter=null because the the journalSheet HTML hasn't been built yet
         if (displayShowQEButton) {
+            console.log("displayShowQEButton");
             buttons.unshift({
                 label: "QE.JEBorder.ShowQE",
                 class: "showQE",
@@ -1397,9 +1399,7 @@ export class QuickEncounter {
         }
 
         //0.7.3 OPen the QE automatically (default) in general unless you have hidden it
-        let showQEDialog;
-        //1.1.0b: No per QE Hide ability in Foundry V10
-        showQEDialog = game.settings.get(QE.MODULE_NAME, "showQEAutomatically");
+        let showQEDialog = game.settings.get(MODULE_ID, "showQEAutomatically");
 
         if (showQEDialog || qeJournalEntry?.showQEOnce) {
             delete qeJournalEntry.showQEOnce;

@@ -30,15 +30,15 @@ export class QESheet extends HandlebarsApplicationMixin(ApplicationV2) {
         if (quickEncounter) this.object = quickEncounter;
     }
 
-    /** @override  */
+    ///** @override  */
     //WARNING: Do not add submitOnClose=true because that will create a submit loop
-    static get defaultOptions() {
-        let mergedObject = foundry.utils.mergeObject(super.defaultOptions, {
-                //no longer setting id here because it gives the same element all the time- override get id() so we can have multiple QE JEs open
-                popOut : true
-            });
-        return mergedObject;
-    }
+    //static get defaultOptions() {
+    //    let mergedObject = foundry.utils.mergeObject(super.defaultOptions, {
+    //            //no longer setting id here because it gives the same element all the time- override get id() so we can have multiple QE JEs open
+    //            popOut : true
+    //        });
+    //    return mergedObject;
+    //}
 
     static DEFAULT_OPTIONS = {
         tag: 'form',
@@ -49,6 +49,13 @@ export class QESheet extends HandlebarsApplicationMixin(ApplicationV2) {
         form: {
             closeOnSubmit : false,
             submitOnClose : false
+        },
+        actions: {
+            addToCombatTracker: this.#addToCombatTracker,
+            qeRemoveActor: this.#qeRemoveActor,
+            qeTileContainer: this.#qeRemoveTile,
+            qeRolltableContainer: this.#qeRemoveRolltable,
+            addTokensTiles: this.#addTokensTiles
         }
     }
 
@@ -72,37 +79,122 @@ export class QESheet extends HandlebarsApplicationMixin(ApplicationV2) {
         return buttons;
     }
 
-    /** @override */
+    /** @override 
     activateListeners(html) {
         super.activateListeners(html);
         if (!this.object?.isFromCompendium) {
-            html.querySelector('button[name="addToCombatTracker"]').addEventListener('click', event => {
+            //html.find('button[name="addToCombatTracker"]').click(event => {
                 // FIX: Need to submit the form first and then run; await this.submit({preventClose: true})
-                this.submit({preventClose: true}).then(this.object?.run(event));
-            });
+                //this.submit({preventClose: true}).then(this.object?.run(event));
+            //});
             //0.7.0: Listeners for when you click "-" (minus)" in actor or tile
-            html.querySelectorAll("#QEContainers .actor-container").forEach((i, thumbnail) => {
+            html.find("#QEContainers .actor-container").each((i, thumbnail) => {
                 //thumbnail.setAttribute("draggable", true);
                 //thumbnail.addEventListener("dragstart", this._onDragStart, false);
                 thumbnail.addEventListener("click", this._onClickActor.bind(this));
             });
-            html.querySelectorAll("#QEContainers .tile-container").forEach((i, thumbnail) => {
+            html.find("#QEContainers .tile-container").each((i, thumbnail) => {
                 //thumbnail.setAttribute("draggable", true);
                 //thumbnail.addEventListener("dragstart", this._onDragStart, false);
                 thumbnail.addEventListener("click", this._onClickTile.bind(this));
             });
-            html.querySelectorAll("#QEContainers .rolltable-container").forEach((i, thumbnail) => {
+            html.find("#QEContainers .rolltable-container").each((i, thumbnail) => {
                 thumbnail.addEventListener("click", this._onClickRollTable.bind(this));
             });
         }
-        html.querySelector('button[name="addTokensTiles"]').addEventListener('click', event => {
+        html.find('button[name="addTokensTiles"]').click(event => {
             this.submit({preventClose: true}).then(QuickEncounter.runAddOrCreate(event, this.object));
         });
+    }*/
+
+
+    /**
+     * @this {QESheet}
+     * @param {PointerEvent} event    The initiating click event.
+     * @param {HTMLElement} target    The capturing HTML element which defined a [data-action].
+     */
+    static async #addToCombatTracker(event, target) {
+        this.submit({preventClose: true});
+        await this.document?.run(event);
+    }
+
+    /**
+     * @this {QESheet}
+     * @param {PointerEvent} event    The initiating click event.
+     * @param {HTMLElement} target    The capturing HTML element which defined a [data-action].
+     */
+    static async #qeRemoveActor(event, target) {
+        event.stopPropagation();
+
+        const srcClass = target.classList.value;
+        const isPortrait = srcClass === "actor-portrait";
+        const isHoverIcon = (srcClass === "actor-subtract") || (srcClass === "fas fa-minus");
+        if ((isPortrait) || (isHoverIcon)) {
+            const rowNum = target.id;
+
+            //Handle this by clearing the appropriate combatant field and re-rendering
+            if ((rowNum >= 0) && (rowNum < this.combatants.length)) {
+                this.combatants.splice(rowNum,1);
+            }
+            this._onChange();
+        }
+    }
+    
+    /**
+     * @this {QESheet}
+     * @param {PointerEvent} event    The initiating click event.
+     * @param {HTMLElement} target    The capturing HTML element which defined a [data-action].
+     */
+    static async #qeRemoveTile(event, target) {
+        event.stopPropagation();
+
+        const srcClass = target.classList.value;
+        const isPortrait = srcClass === "actor-portrait";
+        const isHoverIcon = (srcClass === "actor-subtract") || (srcClass === "fas fa-minus");
+        if ((isPortrait) || (isHoverIcon)) {
+            const rowNum = target.id;
+
+            //Handle this by clearing the appropriate combatant field and re-rendering
+            if ((rowNum >= 0) && (rowNum < this.object?.savedTilesData.length)) {
+                this.object.savedTilesData.splice(rowNum,1);
+            }
+            this._onChange();
+        }
+    }
+
+    /**
+     * @this {QESheet}
+     * @param {PointerEvent} event    The initiating click event.
+     * @param {HTMLElement} target    The capturing HTML element which defined a [data-action].
+     */
+    static async #qeRemoveRolltable(event, target) {
+        event.stopPropagation();
+
+        const srcClass = target.classList.value;
+        const isPortrait = srcClass === "actor-portrait";
+        const isHoverIcon = (srcClass === "actor-subtract") || (srcClass === "fas fa-minus");
+        if ((isPortrait) || (isHoverIcon)) {
+            const rowNum = target.id;
+
+            //Handle this by clearing the appropriate combatant field and re-rendering
+            if ((rowNum >= 0) && (rowNum < this.object?.rollTables.length)) {
+                this.object.rollTables.splice(rowNum,1);
+            }
+            this._onChange();
+        }
     }
 
 
 
-
+    /**
+     * @this {QESheet}
+     * @param {PointerEvent} event    The initiating click event.
+     * @param {HTMLElement} target    The capturing HTML element which defined a [data-action].
+     */
+    static async #addTokensTiles(event, target) {
+        this.submit({preventClose: true});
+        QuickEncounter.runAddOrCreate(event, this.document)
+    }
 
     /** @override */
     async _prepareContext(options) {
@@ -117,7 +209,7 @@ export class QESheet extends HandlebarsApplicationMixin(ApplicationV2) {
            totalXPLine : this.totalXPLine,
            isFromCompendium : this.object?.isFromCompendium,    //FIX: This setting should be on a combatant basis, not one
            //0.9.3 Setting to show this checkbox (checked by default)
-           showAddToCombatTrackerCheckbox : game.settings.get(QE.MODULE_NAME, "showAddToCombatTrackerCheckbox")
+           showAddToCombatTrackerCheckbox : game.settings.get(MODULE_ID, "showAddToCombatTrackerCheckbox")
         };
     }
 
@@ -275,7 +367,7 @@ export class QESheet extends HandlebarsApplicationMixin(ApplicationV2) {
         }
     }
 
-    _onClickActor(event) {
+    /*_onClickActor(event) {
         event.stopPropagation();
 
         const srcClass = event.srcElement.classList.value;
@@ -324,7 +416,7 @@ export class QESheet extends HandlebarsApplicationMixin(ApplicationV2) {
             this._onChange();
         }
             
-    }
+    }*/
 
 }//end class QESHeet
 
