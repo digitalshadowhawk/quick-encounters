@@ -94,7 +94,7 @@ export class EncounterNote {
         let newNote = await canvas.scene.createEmbeddedDocuments("Note",[noteData]);
         //1.0.2c: createEmbeddedDocuments returns an array, and we just want a single element
         if (Array.isArray(newNote)) {newNote = newNote[0];}
-        newNote._sheet = new EncounterNoteConfig(newNote);
+        //newNote._sheet = new EncounterNoteConfig(newNote);
         return newNote;
     }
 
@@ -117,7 +117,7 @@ export class EncounterNote {
 
         if (numNotesDeleted) {
             //0.4.2: Replaces Dialog.prompt from Foundry 0.7.2
-            EncounterNote.dialogPrompt({
+            foundry.applications.api.DialogV2.prompt({
                 title: game.i18n.localize("QE.DeletedJournalNote.TITLE"),
                 content: game.i18n.format("QE.DeletedJournalNote.Multiple.CONTENT",{numNotesDeleted}),
                 label : "",
@@ -125,8 +125,7 @@ export class EncounterNote {
                 options: {
                 top:  window.innerHeight - 350,
                 left: window.innerWidth - 720,
-                width: 400,
-                jQuery: false
+                width: 400
                 }
             });
         }
@@ -135,8 +134,8 @@ export class EncounterNote {
 
     static dialogPrompt({title, content, label, callback}={}, options={}) {
         return new Promise(resolve => {
-          const dialog = new Dialog({
-            title: title,
+          const dialog = new foundry.applications.api.DialogV2({
+            window: {title: title},
             content: content,
             buttons: {
               close: {
@@ -215,22 +214,21 @@ export class EncounterNote {
 
     //1.0.2c: Changed to sync operation (only called if there is no map note when you run)
     static noMapNoteDialog(quickEncounter, event, options) {
-        Dialog.confirm({
+        foundry.applications.api.Dialogv2.confirm({
             title: game.i18n.localize("QE.NoMapNote.TITLE"),
             content : game.i18n.localize("QE.NoMapNote.CONTENT"),
             yes : () => {
                 //1.1.5e: Place a default MapNote and then call run() again
                 EncounterNote.place(quickEncounter, {placeDefault : true}).then(() => {
                     //New approach - just pop up a prompt dialog
-                    EncounterNote.dialogPrompt({
+                    foundry.applications.api.DialogV2.prompt({
                         title: game.i18n.localize("QE.CreatedMapNote.TITLE"),
                         content: game.i18n.localize("QE.CreatedMapNote.CONTENT"),
                         label: "",
                         options: {
                             top: window.innerHeight - 350,
                             left: window.innerWidth - 720,
-                            width: 400,
-                            jQuery: false
+                            width: 400
                         }
                     });
                 });

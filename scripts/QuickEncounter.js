@@ -3,6 +3,8 @@ import { QESheet } from './QESheet.js';
 import { MODULE_ID, MODULE_VERSION, JSON_FLAG, TOKENS_FLAG, ACTOR, dieRollReg } from './constants.js';
 import { AddToEncounter, LinkToEncounter } from './dialogs.js';
 
+import { createJournal } from './utils.js'
+
 export class QuickEncounter {
     constructor(qeData = {}) {
         if (!qeData) { return; }
@@ -53,7 +55,7 @@ export class QuickEncounter {
 
     async serializeIntoJournalEntry(newJournalEntry = null) {
         console.log("serializing into journal entry");
-        
+
         /*Handles three possibilities as a form of polymorphism:
         1. newJournalEntry is non-null => update this.journalEntry and the other variables
         2. newJournalEntry is null, but the qe.journalEntry is non-null - update the existing JE
@@ -270,23 +272,24 @@ export class QuickEncounter {
         let journalEntry = await getDocumentClass("JournalEntry").create(journalData, { activate: false });
         let qeJournalEntry = journalEntry; //the Journal Entry or JournalEntryPage we will store the QE with
         //1.0.4l: In Foundry v10, we want to make this the first JournalEntryPage
-            //1.2.3f: In v10 and v11 there was a default page0; that doesn't seem to be true in v12
-            let journalEntryPage0 = journalEntry.pages?.values()?.next()?.value;
-            if (!journalEntryPage0) {
-                const journalEntryData = {
-                    name: journalEntry.name,
-                    sort: 100000,
-                    type: "text",
-                    text: {
-                        content: content,
-                        format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML
-                    }
+        //1.2.3f: In v10 and v11 there was a default page0; that doesn't seem to be true in v12
+        let journalEntryPage0 = journalEntry.pages?.values()?.next()?.value;
+        if (!journalEntryPage0) {
+            const journalEntryData = {
+                document: journalEntryPage0,
+                name: journalEntry.name,
+                sort: 100000,
+                type: "text",
+                text: {
+                    content: content,
+                    format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML
                 }
-                //Issue #144: Should use getDocumentClass instead of class names directly
-                journalEntryPage0 = await getDocumentClass("JournalEntryPage").create(journalEntryData, { parent: journalEntry, pack: null, renderSheet: false });
             }
-            if (journalEntryPage0) { qeJournalEntry = journalEntryPage0; }
-        
+            //Issue #144: Should use getDocumentClass instead of class names directly
+            journalEntryPage0 = await getDocumentClass("JournalEntryPage").create(journalEntryData, { parent: journalEntry, pack: null, renderSheet: false });
+        }
+        if (journalEntryPage0) { qeJournalEntry = journalEntryPage0; }
+
 
         //REFACTOR: Individual property setting and order is fragile        
         quickEncounter.serializeIntoJournalEntry(qeJournalEntry);
@@ -300,7 +303,7 @@ export class QuickEncounter {
 
         //v0.6.3: Show the Journal Sheet last so it can see the Map Note
         //v1.1.0c: Create a Journal Sheet from the parent Journal Entry (which will show the sub-page if there is one)
-        const ejSheet = new foundry.appv1.sheets.JournalSheet(journalEntry);
+        const ejSheet = new foundry.applications.sheets.journal.JournalEntrySheet(journalEntry);
         ejSheet.render(true);   //0.6.1: This will also pop-open a QE dialog if you have that setting
     }
 
@@ -333,15 +336,15 @@ export class QuickEncounter {
             //0.6.2: If we don't already have coords, then use the tokens we just added
             //0.7.0d: Set QE coords (where tokens are generated around)
             if (!this.coords) {
-                    this.coords = { x: controlledTokens[0].document.x, y: controlledTokens[0].document.y }
+                this.coords = { x: controlledTokens[0].document.x, y: controlledTokens[0].document.y }
             }
             this.addTokens(controlledTokens);
         }
         if (controlledTiles?.length) {
             //0.7.0d: Set QE coords if not already set
             if (!this.coords) {
-                    this.coords = { x: controlledTiles[0].document.x, y: controlledTiles[0].document.y }
-                
+                this.coords = { x: controlledTiles[0].document.x, y: controlledTiles[0].document.y }
+
             }
             this.addTiles(controlledTiles);
 
@@ -357,9 +360,9 @@ export class QuickEncounter {
         //Add the new tokens to the existing ones (or creates new ones)
         //Use tokenData because tokens is too deep to store in flags
         let controlledTokensData;
-            //1.0.4l: "data" replaced by "document" object
-            controlledTokensData = controlledTokens.map(ct => { return ct.document.toObject() });
-        
+        //1.0.4l: "data" replaced by "document" object
+        controlledTokensData = controlledTokens.map(ct => { return ct.document.toObject() });
+
         //TODO: Is this necessary, or could we just remove controlledTokensData?
         const newSavedTokensData = foundry.utils.duplicate(controlledTokensData);
 
@@ -425,10 +428,10 @@ export class QuickEncounter {
         // - but as an option (setting) you can leave the tokens on the map and they will be used instead of being generated
         // (You can still selectively delete them)
         const controlledTokensIds = controlledTokens.map(ct => { return ct.id });
-            const deleteTokensAfterAdd = game.settings.get(MODULE_ID, "deleteTokensAfterAdd");
-            if (deleteTokensAfterAdd) {
-                canvas.scene.deleteEmbeddedDocuments("Token", controlledTokensIds);
-            }
+        const deleteTokensAfterAdd = game.settings.get(MODULE_ID, "deleteTokensAfterAdd");
+        if (deleteTokensAfterAdd) {
+            canvas.scene.deleteEmbeddedDocuments("Token", controlledTokensIds);
+        }
 
     }//end addTokens()
 
@@ -442,7 +445,7 @@ export class QuickEncounter {
         let controlledTilesData = controlledTiles.map(ct => {
             //0.8.3c: Use the toObject() function to get a shallow copy (without prototypes) of controlledTiles.data
             let ctd = ct.data;
-                ctd = ct.data.toObject();
+            ctd = ct.data.toObject();
             ctd.layer = ct.document?.layer?.options?.name ?? "background";
             return ctd;
         });
@@ -452,13 +455,11 @@ export class QuickEncounter {
 
         //Delete the existing tokens (because they will be replaced)
         const controlledTilesIds = controlledTiles.map(ct => { return ct.id });
-            canvas.scene.deleteEmbeddedDocuments("Tile", controlledTilesIds);
-        
+        canvas.scene.deleteEmbeddedDocuments("Tile", controlledTilesIds);
+
     }
 
-
-
-    static async showTutorialJournalEntry() {
+    static async createJournalEntry() {
         //0.5.0: Check if there's an existing open Tutorial
         const existingTutorial = QuickEncounter.findOpenQETutorial();
         if (existingTutorial) {
@@ -471,30 +472,108 @@ export class QuickEncounter {
         const title = game.i18n.localize("QE.HowToUse.TITLE");
         const content = howToUseJournalEntry;
 
-        const journalData = {
+
+    }
+
+    static async showTutorialJournalEntry() {
+        const existingTutorial = QuickEncounter.findOpenQETutorial();
+        console.log(existingTutorial);
+        if (existingTutorial) {
+            existingTutorial.maximize();
+            return;
+        }
+        
+        const howToUseJournalEntry = await foundry.applications.handlebars.renderTemplate('modules/quick-encounters/templates/how-to-use.html');
+        const title = game.i18n.localize("QE.HowToUse.TITLE");
+        const content = howToUseJournalEntry;
+        
+        const journalEntryPageData = {
             folder: null,
             name: title,
-            content: content,
-            type: "encounter",
-            types: "base"
-        }
-        const journalEntry = await getDocumentClass("JournalEntry").create(journalData);
-
-        //v12.1.1: In Foundry v12 it doesn't appear to create a Journal Entry Page by default
-        const journalEntryData = {
-            name: journalEntry.name,
+            type: 'text',
             sort: 100000,
+            text: {
+                content: content
+            }
+        }
+
+        const journalEntryData = {
+            document: "JournalEntry",
+            name: journalEntryPageData.name,
             type: "text",
             text: {
                 content: content,
                 format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML
             }
         }
-        const journalEntryPage = await getDocumentClass("JournalEntryPage").create(journalEntryData, { parent: journalEntry, pack: null, renderSheet: false });
+
+        const journalEntry = await foundry.documents.JournalEntry.create(journalEntryData);
+
+        await JournalEntryPage.create(journalEntryPageData, {parent: journalEntry, pack: null, renderSheet: false});
+
+        //game.journal.createDocument(journalEntry);
+        //console.log(journalEntryPage);
+
+        console.log(journalEntry);
+        journalEntry.show(true);
+    }
+
+    static async showTutorialJournalEntryOld() {
+        //0.5.0: Check if there's an existing open Tutorial
+        const existingTutorial = QuickEncounter.findOpenQETutorial();
+        if (existingTutorial) {
+            existingTutorial.maximize();
+            return;
+        }
+
+        //Create a new JournalEntry - with info on how to use Quick Encounters
+        const howToUseJournalEntry = await foundry.applications.handlebars.renderTemplate('modules/quick-encounters/templates/how-to-use.html');
+        const title = game.i18n.localize("QE.HowToUse.TITLE");
+        const content = howToUseJournalEntry;
+        console.log(content);
+        const journalData = {
+            folder: null,
+            name: title,
+            type: 'text',
+            sort: 100000,
+            text: {
+                content: content
+            }
+            //type: "encounter",
+            //types: "base"
+        }
+        //const journalEntry = await getDocumentClass("JournalEntrySheet").create(journalData);
+        const journalEntryPage = await new foundry.documents.JournalEntryPage(journalData);
+        console.log(journalEntryPage);
+
+        //v12.1.1: In Foundry v12 it doesn't appear to create a Journal Entry Page by default
+        const journalEntryData = {
+            document: foundry.documents.JournalEntry,
+            name: journalEntryPage.name,
+            type: "text",
+            text: {
+                content: content,
+                format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML
+            }
+        }
 
 
-        const ejSheet = new foundry.appv1.sheets.JournalSheet(journalEntry);
-        ejSheet.render(true);
+        const newJournalEntryData = {
+            document: JournalEntry,
+            name: title,
+            sort: 100000,
+            journalPage: journalEntryPage
+        }
+
+
+        //const journalEntryPage = await getDocumentClass("JournalEntryPageSheet").create(journalEntryData, { parent: journalEntry, pack: null, renderSheet: false });
+        const journalEntry = new foundry.documents.JournalEntry({ document: JournalEntry, newJournalEntryData});
+
+        //const ejSheet = new foundry.applications.sheets.journal.JournalEntrySheet(journalEntryPage);
+        //console.log(ejSheet);
+        journalEntry.render(true);
+
+        //createJournal();
     }
 
 
@@ -545,7 +624,7 @@ export class QuickEncounter {
             let qeTutorial = null;
             for (let w of Object.values(ui.windows)) {
                 //Check open windows for the tutorial Journal Entry
-                if (w instanceof foundry.appv1.sheets.JournalSheet) {
+                if (w instanceof foundry.documents.JournalEntrySheet) {
                     const journalEntry = w.object;
                     if (journalEntry && (journalEntry.name === game.i18n.localize("QE.HowToUse.TITLE"))) {
                         qeTutorial = w;
@@ -618,10 +697,10 @@ export class QuickEncounter {
 
         //1.0.3a: Foundry v10 has changed the class (to content-link) and attributes used
         let searchTerms = {
-                class: ".content-link",
-                dataType: "data-type",
-                dataID: "data-uuid"
-        
+            class: ".content-link",
+            dataType: "data-type",
+            dataID: "data-uuid"
+
         }
 
         const extractedActors = [];
@@ -629,7 +708,7 @@ export class QuickEncounter {
         const extractedRollTables = [];
         const INTREG = "([0-9]+)[^0-9]*$"; //Matches last "number followed by non-number at the end of a string"
 
-        const entityLinks = html.find(searchTerms.class);
+        const entityLinks = html.querySelector(searchTerms.class);
         if (!entityLinks || !entityLinks.length) { return { extractedActors, extractedRollTables }; }
         entityLinks.each((i, el) => {
             const element = $(el);
@@ -808,8 +887,8 @@ export class QuickEncounter {
 
         if (savedTilesData) {
             //1.1.5c Switch back to single activation of Tiles layer
-                canvas.tiles.activate();
-                await this.createTiles(savedTilesData, shift, options);
+            canvas.tiles.activate();
+            await this.createTiles(savedTilesData, shift, options);
             //0.7.3 Switch back to Basic Controls
             canvas.tokens.activate();
         }
@@ -971,21 +1050,21 @@ export class QuickEncounter {
                 }
                 //Use the prototype token from the Actors
                 let tempToken;
-                    //0.8.0d: Use new TokenDocument constructor; does it handle token wildcarding? [probably didn't]
-                    //0.8.2a: Per foundry.js#40276 use Actor.getTokenData (does handle token wildcarding)
-                    //1.0.4b: Per https://github.com/foundryvtt/foundryvtt/issues/7766, getTokenData now returns a TokenDocument directly
-                    let tempTokenData;
-                    
-                        //1.0.3b: .data is now merged into the object itself, so we have to strip off the prototype information 
-                        //1.0.4b: And tempTokenData is actually a TokenDocument itself
-                        tempTokenData = await actor.getTokenDocument(tokenData);
-                        /* removed for 1.1.3
-                        tokenData = tempTokenData;
-                        Object.setPrototypeOf(tokenData, {});
-                        */
-                        //v1.1.3 Issue #125 re alpha of generated tokens (previously was getting an actual TokenDocument with the wrong base alpha)
-                        tokenData = tempTokenData.toObject();
-                    
+                //0.8.0d: Use new TokenDocument constructor; does it handle token wildcarding? [probably didn't]
+                //0.8.2a: Per foundry.js#40276 use Actor.getTokenData (does handle token wildcarding)
+                //1.0.4b: Per https://github.com/foundryvtt/foundryvtt/issues/7766, getTokenData now returns a TokenDocument directly
+                let tempTokenData;
+
+                //1.0.3b: .data is now merged into the object itself, so we have to strip off the prototype information 
+                //1.0.4b: And tempTokenData is actually a TokenDocument itself
+                tempTokenData = await actor.getTokenDocument(tokenData);
+                /* removed for 1.1.3
+                tokenData = tempTokenData;
+                Object.setPrototypeOf(tokenData, {});
+                */
+                //v1.1.3 Issue #125 re alpha of generated tokens (previously was getting an actual TokenDocument with the wrong base alpha)
+                tokenData = tempTokenData.toObject();
+
 
                 //If from a Compendium, we remember that and the original Compendium actorID
                 if (eActor.dataPackName) { tokenData.compendiumActorId = eActor.actorID; }
@@ -1053,8 +1132,8 @@ export class QuickEncounter {
         let tempCreatedTokens;
 
         //0.9.3f: Fix 0.8.0 deprecation warning: call canvas.scene.createEmbeddedDocuments() instead of Token.create()
-            tempCreatedTokens = toCreateCombinedTokensData.length ? await canvas.scene.createEmbeddedDocuments("Token", toCreateCombinedTokensData) : [];
-    
+        tempCreatedTokens = toCreateCombinedTokensData.length ? await canvas.scene.createEmbeddedDocuments("Token", toCreateCombinedTokensData) : [];
+
 
         //And Token.create unfortunately returns an element, not an array if you pass a length=1 array
         let encounterTokens;
@@ -1136,8 +1215,8 @@ export class QuickEncounter {
         }
         //0.9.9a: Tile.create() has been deprecated - must have reverted to this code from somewhere else
         let createdTiles;
-            createdTiles = shiftedTilesData.length ? await canvas.scene.createEmbeddedDocuments("Tile", shiftedTilesData) : [];
-        
+        createdTiles = shiftedTilesData.length ? await canvas.scene.createEmbeddedDocuments("Tile", shiftedTilesData) : [];
+
 
         return createdTiles;
     }
@@ -1146,11 +1225,11 @@ export class QuickEncounter {
         if (!encounterTokens || !encounterTokens.length) { return; }
         const tabApp = ui.combat;
 
-            //In v12, don't control tokens and toggle combat state - just use createCombatant()
-            //Modeled after Foundry v12 deprecated toggleCombat
-            TokenDocument.implementation.createCombatants(encounterTokens.filter(t => t.addToCombatTracker));
+        //In v12, don't control tokens and toggle combat state - just use createCombatant()
+        //Modeled after Foundry v12 deprecated toggleCombat
+        TokenDocument.implementation.createCombatants(encounterTokens.filter(t => t.addToCombatTracker));
 
-        
+
 
         //Pop-open the floating combat tracker
         //0.6: Moved after toggling combat in case that actually creates the combat entity
@@ -1166,10 +1245,10 @@ export class QuickEncounter {
         let hostileNPCCombatants;
         let defeatedHostileNPCCombatants;
         //1.1.1 Check for Foundry 10
-            hostileNPCCombatants = combat.turns?.filter(t => ((t.token?.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE) && (!t.actor || !t.players?.length)));
-            defeatedHostileNPCCombatants = combat.turns?.filter(t => (t.defeated &&
-                (t.token?.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE) && (!t.actor || !t.players?.length)));
-        
+        hostileNPCCombatants = combat.turns?.filter(t => ((t.token?.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE) && (!t.actor || !t.players?.length)));
+        defeatedHostileNPCCombatants = combat.turns?.filter(t => (t.defeated &&
+            (t.token?.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE) && (!t.actor || !t.players?.length)));
+
 
         //And of player-owned tokens
         const pcTokens = combat.turns?.filter(t => (t.actor && t.players?.length));
@@ -1232,8 +1311,8 @@ export class QuickEncounter {
     static getActorXP(actor) {
         if ((game.system.id !== "dnd5e") || !actor) { return null; }
         try {
-                return actor.system?.details?.xp?.value;
-            
+            return actor.system?.details?.xp?.value;
+
         } catch (err) {
             return null;
         }
@@ -1296,19 +1375,28 @@ export class QuickEncounter {
                 icon: "fas fa-swords",
                 onclick: async ev => {
                     // 1.1.0b: If Foundry v10 then show all QEs 
-                        for (let journalEntryPageId of journalSheet.object?.pages?.keys()) {
-                            const journalPageSheet = journalSheet.getPageSheet(journalEntryPageId);
-                            //Also reset the hide toggle (because otherwise this will never show automatically)
-                            const qe2 = QuickEncounter.extractQuickEncounter(journalPageSheet);
-                            if (qe2 && journalPageSheet?.qeDialog) {
-                                qe2.hideQE = null;
-                                qe2.serializeIntoJournalEntry();
-                                journalPageSheet.qeDialog.render(true);
-                            }
+                    for (let journalEntryPageId of journalSheet.object?.pages?.keys()) {
+                        const journalPageSheet = journalSheet.getPageSheet(journalEntryPageId);
+                        //Also reset the hide toggle (because otherwise this will never show automatically)
+                        const qe2 = QuickEncounter.extractQuickEncounter(journalPageSheet);
+                        if (qe2 && journalPageSheet?.qeDialog) {
+                            qe2.hideQE = null;
+                            qe2.serializeIntoJournalEntry();
+                            journalPageSheet.qeDialog.render(true);
                         }
+                    }
                 }
             });
         }
+
+        journalSheet.options.actions["printJournal"] = printJournal;
+        buttons.push({
+            label: "Journal to Console",
+            //1.1.3c Issue 105: Replace raised-fist with crossed-swords to be consistent with CT
+            icon: "fas fa-swords",
+            action: "printJournal"
+        });
+
     }
 
     // Hook on renderJournalPageSheet for Foundry v10 multi-page Journals
@@ -1482,3 +1570,10 @@ export class Dialog3 extends Dialog {
         }
     }
 }
+
+
+
+    function printJournal() {
+        const journal = this.document;
+        console.log(journal);
+    }

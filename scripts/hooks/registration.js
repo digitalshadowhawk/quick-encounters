@@ -18,13 +18,13 @@ export function registerHooks() {
 
     //The Journal Sheet  looks to see if this is the Tutorial and deletes the Journal Entry if so
     //Placing a map Note is moved to when you actually run the Encounter
-    Hooks.on('closeJournalSheet', async (journalSheet, html) => {
+    Hooks.on('closeJournalEntrySheet', async (journalSheet, html) => {
         if (!game.user.isGM) { return; }
         const journalEntry = journalSheet.object;
 
         //0.5.3: BUG: If you had the Tutorial JE open it would delete another Journal Entry when you closed it
         //This was happening because $("QuickEncountersTutorial") by itself was searching the whole DOM
-        if (journalSheet.element.find("#QuickEncountersTutorial").length) {
+        if (!!journalSheet.element.querySelector("QuickEncountersTutorial")) {
             //This is the tutorial Journal Entry
             //v0.4.0 Check that we haven't already deleted this (because onDelete -> close)
             if (game.journal.get(journalEntry.id)) {
@@ -70,7 +70,7 @@ export function registerHooks() {
     });
 
 //getHeaderControlsJournalEntrySheet
-    Hooks.on("getJournalSheetHeaderButtons", QuickEncounter.getJournalSheetHeaderButtons);
+    Hooks.on("getHeaderControlsJournalEntrySheet", QuickEncounter.getJournalSheetHeaderButtons);
     Hooks.on("init", QuickEncounter.init);
     //Hooks.on('getSceneControlButtons', QuickEncounter.getSceneControlButtons);
     Hooks.on("deleteCombat", (combat, options, userId) => {
